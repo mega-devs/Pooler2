@@ -1,0 +1,14 @@
+{
+  "imapdomains":[
+    "",
+    "imap.",
+    "imaps.",
+    "mail.",
+    "email.",
+    "mx.",
+    "inbound.",
+    "securemail.",
+    "imap.mail.",
+    "imap-mail."
+  ]
+}

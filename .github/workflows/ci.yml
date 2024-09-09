@@ -1,0 +1,33 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Copy project files to server
+        run: |
+          rsync -avz --exclude '.git' --exclude '.github' -e "ssh -o StrictHostKeyChecking=no" ./ root@93.123.72.45:/root/mmb/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and start Docker containers on server
+        run: |
+          ssh -o StrictHostKeyChecking=no root@93.123.72.45 'cd /root/mmb/ && docker-compose pull && docker-compose up -d'
