@@ -21,20 +21,30 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
 
+# create log dirs
+temp_logs_dir = os.path.join("app", "data", "temp_logs")
+full_logs_dir = os.path.join("app", "data", "full_logs")
+
+if not os.path.exists(temp_logs_dir):
+    os.makedirs(temp_logs_dir)
+
+if not os.path.exists(full_logs_dir):
+    os.makedirs(full_logs_dir)
+
 # создаем обработчик для вывода в файл
-file_handler_temp_smtp = logging.FileHandler(os.path.join("app", "data", "temp_logs", "temp_smtp.log"))
+file_handler_temp_smtp = logging.FileHandler(os.path.join(temp_logs_dir, "temp_smtp.log"))
 file_handler_temp_smtp.setLevel(logging.DEBUG)
 file_handler_temp_smtp.setFormatter(formatter)
 
-file_handler_temp_imap = logging.FileHandler(os.path.join("app", "data", "temp_logs", "temp_imap.log"))
+file_handler_temp_imap = logging.FileHandler(os.path.join(temp_logs_dir, "temp_imap.log"))
 file_handler_temp_imap.setLevel(logging.DEBUG)
 file_handler_temp_imap.setFormatter(formatter)
 
-file_handler_smtp = logging.FileHandler(os.path.join("app", "data", "full_logs", "smtp.log"))
+file_handler_smtp = logging.FileHandler(os.path.join(full_logs_dir, "smtp.log"))
 file_handler_smtp.setLevel(logging.DEBUG)
 file_handler_smtp.setFormatter(formatter)
 
-file_handler_imap = logging.FileHandler(os.path.join("app", "data", "full_logs", "imap.log"))
+file_handler_imap = logging.FileHandler(os.path.join(full_logs_dir, "imap.log"))
 file_handler_imap.setLevel(logging.DEBUG)
 file_handler_imap.setFormatter(formatter)
 
