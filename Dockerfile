@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Открываем порт, на котором будет работать приложение
-EXPOSE 5000
+EXPOSE 5001
 
 # Определяем команду для запуска приложения
-CMD ["python", "manage.py", "runserver", "-h", "0.0.0.0"]
+CMD ["python", "manage.py", "runserver", "-h", "0.0.0.0", "-p", "5001"]
