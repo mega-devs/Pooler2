@@ -75,6 +75,7 @@ def upload_file_by_url():
 def is_valid_telegram_username(username):
     return re.match(r'^(https://t\.me/|@)?[a-zA-Z0-9_]{5,32}$', username)
 
+
 async def parse_messages(client, channel):
     messages = []
     async for message in client.iter_messages(channel, limit=10):
@@ -85,12 +86,14 @@ async def parse_messages(client, channel):
         })
     return messages
 
+
 async def read_existing_messages(filename):
     if os.path.exists(filename):
         async with aiofiles.open(filename, 'r', encoding='utf-8') as f:
             content = await f.read()
             return json.loads(content) if content else []
     return []
+
 
 async def write_messages(filename, messages):
     async with aiofiles.open(filename, 'w', encoding='utf-8') as f:
@@ -128,6 +131,7 @@ async def telegram_add_channel():
     else:
         return jsonify({'status': 200, 'message': 'No new unique messages to save.'})
 
+
 @api.route('/', methods=['GET'])
 def redirect_to_panel():
     return redirect(url_for('main.panel'))
@@ -135,7 +139,17 @@ def redirect_to_panel():
 
 @api.route('/panel', methods=['GET', 'POST'])
 def panel():
-    return render_template('index.html')
+    return render_template('index.html', active_page="dashboard")
+
+
+@api.route('/panel/tables', methods=['GET', 'POST'])
+def panel_table():
+    return render_template('tables.html', active_page="tables")
+
+
+@api.route('/panel/settings', methods=['GET', 'POST'])
+def panel_settings():
+    return render_template('settings.html', active_page="settings")
 
 
 async def check_smtp_emails(filename):

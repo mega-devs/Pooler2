@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pooler - Main Page</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="" name="keywords" />
+    <meta content="" name="description" />
+
+    <!-- Favicon -->
+    <link href="../static/img/Email%20Sign.png" rel="icon" />
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css"
+    />
+
+    <!-- Icon Font Stylesheet -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+
+    <!-- Libraries Stylesheet -->
+    <link
+      href="../static/lib/owlcarousel/assets/owl.carousel.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="../static/lib/tempusdominus/css/tempusdominus-bootstrap-4.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet" />
+
+    <!-- Template Stylesheet -->
+    <link href="../static/css/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div class="container-fluid position-relative d-flex p-0">
+      <!-- Spinner Start -->
+      <div
+        id="spinner"
+        class="show bg-dark position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center"
+      >
+        <div
+          class="spinner-border text-primary"
+          style="width: 3rem; height: 3rem"
+          role="status"
+        >
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+      <!-- Spinner End -->
+
+      <!-- Sidebar Start -->
+      <div class="sidebar pe-4 pb-3">
+        <nav class="navbar bg-secondary navbar-dark">
+          <a href="#dashboard" class="navbar-brand mx-4 mb-3">
+            <h3 class="text-primary"><i class="fas fa-envelope"></i> Pooler</h3>
+          </a>
+          <div class="navbar-nav w-100">
+            <a href="#dashboard" class="nav-item nav-link active"
+              ><i class="fa fa-tachometer-alt me-2"></i
+              ><span data-i18n-text="dashboard">Dashboard</span></a
+            >
+            <!-- <div class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown"><i
+                            class="fa fa-laptop me-2"></i>Data</a>
+                    <div class="dropdown-menu bg-transparent border-0">
+                        <a href="#console_smtp" class="dropdown-item">SMTPS</a>
+                        <a href="#console_imap" class="dropdown-item">IMAPS</a>
+                    </div>
+                </div> -->
+
+            <a href="#console_logs" class="nav-item nav-link"
+              ><i class="far fa-file-alt me-2"></i
+              ><span data-i18n-text="logs">Logs</span></a
+            >
+            <a href="/panel/tables" class="nav-item nav-link">
+              <i class="far fa-file-alt me-2"></i>
+              <span data-i18n-text="tables">Tables</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+      <!-- Sidebar End -->
+
+      <!-- Content Start -->
+      <div class="content">
+        <!-- Navbar Start -->
+        <nav
+          class="navbar navbar-expand bg-secondary navbar-dark sticky-top px-4 py-0"
+        >
+          <a href="#" class="sidebar-toggler flex-shrink-0">
+            <i class="fa fa-bars"></i>
+          </a>
+          <div
+            class="nav-item dropdown flex-wrap"
+            style="display: flex; margin-left: 1em; justify-content: center"
+          >
+            <a
+              href="#"
+              class="nav-link dropdown-toggle"
+              data-bs-toggle="dropdown"
+              ><i class="fa fa-globe me-2"></i
+            ></a>
+            <div
+              class="dropdown-menu bg-transparent border-0"
+              style="background-color: white"
+            >
+              <div
+                style="
+                  width: auto;
+                  height: auto;
+                  background-color: #000000;
+                  border-radius: 1em;
+                  padding: 1em;
+                  margin-right: 1em;
+                "
+              >
+                <button
+                  class="btn btn-primary"
+                  data-i18n="en"
+                  data-i18n-text="english"
+                  style="border: none"
+                >
+                  English
+                </button>
+                <br />
+                <button
+                  class="btn btn-primary"
+                  data-i18n="de"
+                  data-i18n-text="german"
+                  style="margin-top: 1em; border: none"
+                >
+                  German
+                </button>
+              </div>
+            </div>
+          </div>
+          <div
+            class="navbar-nav align-items-center ms-auto flex-wrap"
+            style="height: 4em"
+          >
+            <div class="navbar-nav align-items-center ms-auto">
+              <span class="nav-item" id="current_time"></span>
+            </div>
+          </div>
+        </nav>
+        <!-- Navbar End -->
+
+        <!-- Sale & Revenue Start -->
+
+        <!-- Sale & Revenue End -->
+
+        <!-- Sales Chart Start -->
+
+        <!-- ADD FILE -->
+        <div id="dashboard" class="container-fluid pt-4 px-4">
+          <div class="bg-secondary text-center rounded p-4">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <h4 class="mb-0" data-i18n-text="addFile">ADD FILE</h4>
+              <label for="file-input" class="btn btn-sm btn-danger">
+                <input
+                  type="file"
+                  id="file-input"
+                  class="d-none"
+                  data-i18n-text="chooseFile"
+                />
+                Choose file
+              </label>
+            </div>
+            <br />
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <h4 class="mb-0 mr-3" style="white-space: nowrap">
+                ADD FILE BY URL
+              </h4>
+              <div class="input-group w-50" style="margin-right: 1em">
+                <input
+                  type="text"
+                  id="url-input"
+                  class="form-control"
+                  placeholder="Enter URL"
+                  data-i18n-text="enterUrl"
+                  style="margin-right: 1em"
+                />
+                <div class="input-group-append">
+                  <button
+                    class="btn btn-primary"
+                    type="button"
+                    id="fetch-url-button"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <h4 class="mb-0 mr-3" style="white-space: nowrap">
+                ADD TELEGRAM
+              </h4>
+              <div class="input-group w-50" style="margin-right: 1em">
+                <input
+                  type="text"
+                  id="tg-url-input"
+                  class="form-control"
+                  placeholder="Enter Telegram URL or Username"
+                  data-i18n-text="enterTgUrl"
+                  style="margin-right: 1em"
+                />
+                <div class="input-group-append">
+                  <button
+                    class="btn btn-primary"
+                    type="button"
+                    id="fetch-tg-button"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+            <hr />
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <h4 class="mb-0" data-i18n-text="fileList">FILE LIST</h4>
+              <div id="file-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADD FILE -->
+
+        <!-- INFO -->
+        <div class="container-fluid pt-4 px-4">
+          <div class="row g-4">
+            <div class="col-sm-12 col-md-6 col-xl-6">
+              <div class="h-100 bg-secondary rounded p-4">
+                <div
+                  class="d-flex align-items-center justify-content-between mb-2"
+                >
+                  <h4 class="mb-0" data-i18n-text="smtpInfo">SMTP INFO</h4>
+                </div>
+                <hr />
+                <div class="table-responsive">
+                  <table
+                    class="table text-start align-middle table-bordered table-hover mb-0"
+                    id="smtp_info_table"
+                  >
+                    <thead>
+                      <tr class="text-white">
+                        <th scope="col">
+                          <span data-i18n-text="email">Email</span>
+                        </th>
+                        <th scope="col">
+                          <span data-i18n-text="password">Password</span>
+                        </th>
+                        <th scope="col">
+                          <span data-i18n-text="valid">Status</span>
+                        </th>
+                        <th scope="col">
+                          <span data-i18n-text="lastChecked">Last Checked</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <hr />
+                <h4 data-i18n-text="smtpStat">SMTP STATISTICS</h4>
+                <h6>Checked: <span id="smtp_checked">0</span></h6>
+                <h6 style="color: lawngreen">
+                  Valid: <span id="smtp_valid">0</span>
+                </h6>
+                <h6 style="color: red">Dead: <span id="smtp_dead">0</span></h6>
+              </div>
+            </div>
+            <div class="col-sm-12 col-md-6 col-xl-6">
+              <div class="h-100 bg-secondary rounded p-4">
+                <div
+                  class="d-flex align-items-center justify-content-between mb-2"
+                >
+                  <h4 class="mb-0" data-i18n-text="imapInfo">IMAP INFO</h4>
+                </div>
+                <hr />
+                <div class="table-responsive">
+                  <table
+                    class="table text-start align-middle table-bordered table-hover mb-0"
+                    id="imap_info_table"
+                  >
+                    <thead>
+                      <tr class="text-white">
+                        <th scope="col">
+                          <span data-i18n-text="email">Email</span>
+                        </th>
+                        <th scope="col">
+                          <span data-i18n-text="password">Password</span>
+                        </th>
+                        <th scope="col">
+                          <span data-i18n-text="status">Status</span>
+                        </th>
+                        <th scope="col">
+                          <span data-i18n-text="lastChecked">Last Checked</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <hr />
+                <h4 data-i18n-text="imapStat">IMAP STATISTICS</h4>
+                <h6>Checked: <span id="imap_checked">0</span></h6>
+                <h6 style="color: lawngreen">
+                  Valid: <span id="imap_valid">0</span>
+                </h6>
+                <h6 style="color: red">Dead: <span id="imap_dead">0</span></h6>
+              </div>
+            </div>
+
+            <div class="col-sm-12 col-md-6 col-xl-12">
+              <div class="h-100 bg-secondary rounded p-4">
+                <div
+                  class="d-flex align-items-center justify-content-between mb-2"
+                >
+                  <h4 class="mb-0" data-i18n-text="logs">LOGS</h4>
+                </div>
+                <hr />
+                <div id="console_logs_container">
+                  <pre id="console_logs" class="console"></pre>
+                </div>
+                <button
+                  class="btn btn-sm btn-primary"
+                  id="clear-logs"
+                  type="button"
+                >
+                  Clear
+                </button>
+                <button
+                  class="btn btn-sm btn-primary"
+                  id="clear-logs"
+                  type="button"
+                  style="margin-left: 1em"
+                >
+                  Download Logs
+                </button>
+              </div>
+            </div>
+
+            <!-- Widgets End -->
+
+            <!-- Footer Start -->
+            <div class="container-fluid pt-4 px-4">
+              <div class="bg-secondary rounded-top p-4">
+                <div class="row">
+                  <div class="col-12 col-sm-6 text-center text-sm-start">
+                    &copy; <a href="#">Pooler</a>, All Right Reserved.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Footer End -->
+          </div>
+          <!-- Content End -->
+
+          <!-- Back to Top -->
+          <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"
+            ><i class="bi bi-arrow-up"></i
+          ></a>
+        </div>
+      </div>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/lib/chart/chart.min.js"></script>
+    <script src="../static/lib/easing/easing.min.js"></script>
+    <script src="../static/lib/waypoints/waypoints.min.js"></script>
+    <script src="../static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="../static/lib/tempusdominus/js/moment.min.js"></script>
+    <script src="../static/lib/tempusdominus/js/moment-timezone.min.js"></script>
+    <script src="../static/lib/tempusdominus/js/tempusdominus-bootstrap-4.min.js"></script>
+    <script src="../static/js/time.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://unpkg.com/i18next/dist/umd/i18next.min.js"></script>
+    <script src="https://unpkg.com/i18next-browser-languagedetector/dist/umd/i18nextBrowserLanguageDetector.min.js"></script>
+    <script>
+      const resources = {
+        en: {
+          translation: {
+            dashboard: "DASHBOARD",
+            german: "German",
+            english: "English",
+            addFile: "ADD FILE",
+            chooseFile: "Choose file",
+            fileList: "FILE LIST",
+            smtpInfo: "SMTP INFO",
+            imapInfo: "IMAP INFO",
+            logs: "LOGS",
+            email: "Email",
+            password: "Password",
+            valid: "Valid",
+            lastChecked: "Last Checked",
+            imapStat: "IMAP STATISTICS",
+            smtpStat: "SMTP STATISTICS",
+          },
+        },
+        de: {
+          translation: {
+            dashboard: "DASHBOARD",
+            german: "Deutsch",
+            english: "Englischsprachig",
+            addFile: "DATEI HINZUFÜGEN",
+            chooseFile: "Datei auswählen",
+            fileList: "DATEILISTE",
+            smtpInfo: "SMTP INFORMATIONEN",
+            imapInfo: "IMAP INFORMATIONEN",
+            logs: "PROTOKOLLE",
+            email: "Email",
+            password: "Passwort",
+            valid: "Status",
+            lastChecked: "Zuletzt überprüft",
+            imapStat: "IMAP STATISTIKEN",
+            smtpStat: "SMTP STATISTIKEN",
+          },
+        },
+      };
+
+      i18next.use(i18nextBrowserLanguageDetector).init(
+        {
+          resources,
+          fallbackLng: "en",
+          debug: true,
+          interpolation: {
+            escapeValue: false,
+          },
+        },
+        function (err, t) {
+          updateContent();
+        }
+      );
+
+      function updateContent() {
+        document
+          .querySelectorAll("[data-i18n-text]")
+          .forEach(function (element) {
+            const key = element.getAttribute("data-i18n-text");
+            element.textContent = i18next.t(key);
+          });
+      }
+
+      document.querySelectorAll("button[data-i18n]").forEach(function (button) {
+        button.addEventListener("click", function () {
+          const lng = button.getAttribute("data-i18n");
+          i18next.changeLanguage(lng, function (err, t) {
+            updateContent();
+          });
+        });
+      });
+    </script>
+
+    <script>
+      let smtp_table;
+      let imap_table;
+      $(document).ready(function () {
+        smtp_table = $("#smtp_info_table").DataTable({
+          initComplete: function () {
+            this.api()
+              .columns()
+              .every(function () {
+                var column = this;
+                var select = $('<select><option value=""></option></select>')
+                  .appendTo($(column.footer()).empty())
+                  .on("change", function () {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+
+                    column
+                      .search(val ? "^" + val + "$" : "", true, false)
+                      .draw();
+                  });
+
+                column
+                  .data()
+                  .unique()
+                  .sort()
+                  .each(function (d, j) {
+                    select.append(
+                      '<option value="' + d + '">' + d + "</option>"
+                    );
+                  });
+              });
+          },
+        });
+      });
+
+      $(document).ready(function () {
+        imap_table = $("#imap_info_table").DataTable({
+          initComplete: function () {
+            this.api()
+              .columns()
+              .every(function () {
+                var column = this;
+                var select = $('<select><option value=""></option></select>')
+                  .appendTo($(column.footer()).empty())
+                  .on("change", function () {
+                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+
+                    column
+                      .search(val ? "^" + val + "$" : "", true, false)
+                      .draw();
+                  });
+
+                column
+                  .data()
+                  .unique()
+                  .sort()
+                  .each(function (d, j) {
+                    select.append(
+                      '<option value="' + d + '">' + d + "</option>"
+                    );
+                  });
+              });
+          },
+        });
+      });
+    </script>
+
+    <!-- Template Javascript -->
+    <script src="../static/js/main.js"></script>
+
+    <script>
+      document
+        .getElementById("fetch-url-button")
+        .addEventListener("click", function () {
+          const urlInput = document.getElementById("url-input").value;
+
+          if (!urlInput) {
+            alert("Please enter a URL");
+            return;
+          }
+
+          fetch("/api/upload_file_by_url", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: urlInput }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.status === 200) {
+                let filename = data.filename;
+                filename = filename.replaceAll(" ", "_");
+                addFileToList(filename);
+                console.log(filename);
+                start_checking = true;
+
+                fetch("/api/check-emails-file/" + filename, {
+                  method: "GET",
+                }).then(() => {
+                  fetchLogs();
+                });
+              } else {
+                alert("Error: " + data.error);
+              }
+            });
+        });
+      document
+        .getElementById("fetch-tg-button")
+        .addEventListener("click", function () {
+          const tgInput = document.getElementById("tg-url-input").value;
+
+          if (!tgInput) {
+            alert("Please enter a Telegram URL or Username");
+            return;
+          }
+
+          fetch("/api/upload_file_by_telegram", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ channel: tgInput }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.status === 200) {
+                alert("Telegram messages parsed successfully!");
+                console.log(data.messages); // You can update this part to display messages as needed
+                // Optionally, add the file to the file list if needed
+                addFileToList(data.file);
+              } else {
+                alert("Error: " + data.error);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+            });
+        });
+      function addFileToList(filename) {
+        const fileList = document.getElementById("file-list");
+        const fileLink = document.createElement("a");
+        fileLink.href = `/api/download/${filename}`;
+        fileLink.textContent = filename;
+        fileLink.download = filename;
+        const br = document.createElement("br");
+        fileList.appendChild(fileLink);
+        fileList.appendChild(br);
+      }
+
+      const clear_logs_btn = document.getElementById("clear-logs");
+      clear_logs_btn.addEventListener("click", function () {
+        document.getElementById("console_logs").innerHTML = "";
+      });
+
+      let start_checking = false;
+      const fileInput = document.getElementById("file-input");
+
+      fileInput.addEventListener("change", function () {
+        const file = fileInput.files[0];
+
+        const formData = new FormData();
+        formData.append("file", file);
+        fileInput.disabled = true;
+        fetch("/api/upload_combofile", {
+          method: "POST",
+          body: formData,
+        }).then((response) => {
+          let filename = file.name;
+          filename = filename.replaceAll(" ", "_");
+          addFileToList(filename);
+          console.log(filename);
+          start_checking = true;
+
+          fetch("/api/check-emails-file/" + filename, {
+            method: "GET",
+          }).then(() => {
+            fetchLogs();
+            fileInput.disabled = false;
+          });
+        });
+        fileInput.disabled = false;
+      });
+
+      function addFileToList(filename) {
+        const fileList = document.getElementById("file-list");
+        const fileLink = document.createElement("a");
+        fileLink.href = `/api/download/${filename}`;
+        fileLink.textContent = filename;
+        fileLink.download = filename;
+        const br = document.createElement("br");
+        fileList.appendChild(fileLink);
+        fileList.appendChild(br);
+      }
+
+      let previousLog = "";
+      let endOfLogs = false;
+      let logs_info = "";
+      let smtp_log = "";
+      let imap_log = "";
+      let email, password, valid, time, logData;
+      let current_index = 0;
+
+      async function fetchLogs() {
+        while (start_checking) {
+          const response = await fetch("/api/logs/" + current_index);
+          const data = await response.json();
+          const smtp_logs = data.smtp_logs;
+          const imap_logs = data.imap_logs;
+
+          if (smtp_logs.length === 0 && imap_logs.length === 0) {
+            start_checking = false;
+            break;
+          }
+
+          await renderLogs(smtp_logs, imap_logs);
+
+          current_index += 100;
+        }
+      }
+
+      async function renderLogs(smtp_logs, imap_logs) {
+        for (const log of smtp_logs) {
+          await new Promise(requestAnimationFrame); // Allow browser to update UI
+          const smtpLogOutput = `<span style="color: ${
+            log.includes("dead") ? "red" : "lawngreen"
+          }">${log}</span><br>`;
+          document.getElementById("console_logs").innerHTML += smtpLogOutput;
+          document.getElementById("console_logs").scrollTop =
+            document.getElementById("console_logs").scrollHeight;
+
+          email = log.split("'email': '")[1].split("', 'password'")[0];
+          password = log.split("', 'password': '")[1].split("', 'valid'")[0];
+          valid = log.split("', 'valid': '")[1].split("', 'time'")[0];
+          time = log.split("', 'time': '")[1].split("'}")[0];
+          logData = [email, password, valid, time];
+          smtp_table.row.add(logData).draw();
+
+          updateStatistics(log, "smtp");
+        }
+
+        for (const log of imap_logs) {
+          await new Promise(requestAnimationFrame); // Allow browser to update UI
+          const imapLogOutput = `<span style="color: ${
+            log.includes("dead") ? "red" : "lawngreen"
+          }">${log}</span><br>`;
+          document.getElementById("console_logs").innerHTML += imapLogOutput;
+          document.getElementById("console_logs").scrollTop =
+            document.getElementById("console_logs").scrollHeight;
+
+          email = log.split("'email': '")[1].split("', 'password'")[0];
+          password = log.split("', 'password': '")[1].split("', 'valid'")[0];
+          valid = log.split("', 'valid': '")[1].split("', 'time'")[0];
+          time = log.split("', 'time': '")[1].split("'}")[0];
+          logData = [email, password, valid, time];
+          imap_table.row.add(logData).draw();
+
+          updateStatistics(log, "imap");
+        }
+      }
+
+      function updateStatistics(log, type) {
+        const checkedElement = document.getElementById(`${type}_checked`);
+        const validElement = document.getElementById(`${type}_valid`);
+        const deadElement = document.getElementById(`${type}_dead`);
+
+        let checked = parseInt(checkedElement.textContent);
+        let valid = parseInt(validElement.textContent);
+        let dead = parseInt(deadElement.textContent);
+
+        checked++;
+        if (log.includes("'valid': 'valid'")) {
+          valid++;
+        } else if (log.includes("dead")) {
+          dead++;
+        }
+
+        checkedElement.textContent = checked;
+        validElement.textContent = valid;
+        deadElement.textContent = dead;
+      }
+
+      function initializeDataTable(tableId) {
+        if (!$.fn.DataTable.isDataTable(tableId)) {
+          $(tableId).DataTable({
+            initComplete: function () {
+              this.api()
+                .columns()
+                .every(function () {
+                  var column = this;
+                  var select = $('<select><option value=""></option></select>')
+                    .appendTo($(column.footer()).empty())
+                    .on("change", function () {
+                      var val = $.fn.dataTable.util.escapeRegex($(this).val());
+
+                      column
+                        .search(val ? "^" + val + "$" : "", true, false)
+                        .draw();
+                    });
+
+                  column
+                    .data()
+                    .unique()
+                    .sort()
+                    .each(function (d, j) {
+                      select.append(
+                        '<option value="' + d + '">' + d + "</option>"
+                      );
+                    });
+                });
+            },
+          });
+        } else {
+          console.log(`Table ${tableId} is already initialized.`);
+        }
+      }
+
+      $(document).ready(function () {
+        initializeDataTable("#smtp_info_table");
+        initializeDataTable("#imap_info_table");
+      });
+    </script>
+  </body>
+  <style>
+    table {
+      width: auto;
+      margin-bottom: 10px !important;
+    }
+
+    #smtp_info_table tfoot th {
+      background-color: #f2f2f2;
+    }
+
+    #smtp_info_table td,
+    #smtp_info_table th {
+      border: 1px solid white !important;
+    }
+
+    #smtp_info_table_wrapper .dt-layout-row {
+      display: flex !important;
+      flex-wrap: wrap;
+      justify-content: space-around;
+    }
+
+    #smtp_info_table_wrapper button {
+      background-color: transparent !important;
+      color: white !important;
+      border: 1px solid white;
+      border-radius: 3px;
+      transition: background-color 0.3s ease;
+    }
+
+    #smtp_info_table_wrapper button:hover {
+      background-color: red !important;
+      border-radius: 5px;
+    }
+
+    #imap_info_table td,
+    #imap_info_table th {
+      border: 1px solid white !important;
+    }
+
+    #imap_info_table_wrapper button {
+      background-color: transparent;
+      color: white !important;
+      border: 1px solid white;
+      border-radius: 3px;
+      transition: background-color 0.3s ease;
+    }
+
+    #imap_info_table_wrapper button:hover {
+      background-color: red;
+      border-radius: 5px;
+    }
+
+    #imap_info_table_wrapper .dt-layout-row {
+      display: flex !important;
+      flex-wrap: wrap;
+      justify-content: space-around;
+    }
+
+    label {
+      margin-right: 1em;
+      margin-left: 1em;
+    }
+
+    #current_time {
+      color: white;
+    }
+
+    .console {
+      background-color: black;
+      max-height: 20em;
+      color: white;
+      padding: 1em;
+      overflow-y: auto;
+    }
+
+    .btn-danger {
+      color: white;
+      background-color: red;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-danger:hover {
+      background-color: #c70000;
+    }
+
+    input {
+      color: white !important;
+    }
+
+    [type="search"]::-webkit-search-cancel-button {
+      -webkit-appearance: none;
+      background-color: white;
+      -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23777'><path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/></svg>");
+      background-size: 20px 20px;
+      height: 20px;
+      width: 20px;
+    }
+
+    #console_logs::-webkit-scrollbar {
+      width: 0.5em;
+      height: 100%;
+    }
+
+    #console_logs::-webkit-scrollbar-track {
+      background-color: #3f3f3f;
+    }
+
+    #console_logs::-webkit-scrollbar-thumb {
+      background-color: #ff0000;
+    }
+
+    #console_logs::-webkit-scrollbar-thumb:hover {
+      background-color: #d50000;
+    }
+  </style>
+</html>
