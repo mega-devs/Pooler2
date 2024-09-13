@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('', views.index, name='index'),
     path('upload_file_by_url/', views.upload_file_by_url, name='upload_file_by_url'),
     path('upload_file_by_telegram/', views.telegram_add_channel, name='upload_file_by_telegram'),
     path('panel/', views.panel, name='panel'),
