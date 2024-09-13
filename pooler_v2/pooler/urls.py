@@ -3,7 +3,10 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', views.redirect_to_panel, name='redirect_to_panel'),
+    path('panel/', views.panel, name='panel'),
+    path('panel/tables/', views.panel_table, name='panel_table'),
+    path('panel/settings/', views.panel_settings, name='panel_settings'),
     path('upload_file_by_url/', views.upload_file_by_url, name='upload_file_by_url'),
     path('upload_file_by_telegram/', views.telegram_add_channel, name='upload_file_by_telegram'),
     path('panel/', views.panel, name='panel'),
