@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Pooler - Error Logs Page{% endblock %}
+
+{% block info %}
+<div class="col-12">
+    <div class="bg-secondary rounded h-100 p-4">
+        <h6 class="mb-4">Error Logs</h6>
+        <div class="d-flex">
+            <select class="form-select form-select-sm mb-3 w-auto" aria-label=".form-select-sm example">
+                <option selected="">Filter 1</option>
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+            </select>
+            <select class="form-select form-select-sm mb-3 w-auto ms-3" aria-label=".form-select-sm example">
+                <option selected="">Filter 2</option>
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+            </select>
+            <select class="form-select form-select-sm mb-3 w-auto ms-3" aria-label=".form-select-sm example">
+                <option selected="">Filter 3</option>
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+            </select>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-3">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Password</th>
+                        <th scope="col">Provider</th>
+                        <th scope="col">Country</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">1</th>
+                        <td>jhon@email.com</td>
+                        <td>password</td>
+                        <td>public</td>
+                        <td>USA</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">2</th>
+                        <td>jhon@email.com</td>
+                        <td>password</td>
+                        <td>private</td>
+                        <td>USA</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">3</th>
+                        <td>jhon@email.com</td>
+                        <td>password</td>
+                        <td>private</td>
+                        <td>USA</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="d-flex justify-content-center">
+                <div class="btn-toolbar" role="toolbar">
+                    <div class="btn-group me-2" role="group" aria-label="Second group">
+                        <button type="button" class="btn btn-danger"><<</button>
+                        <button type="button" class="btn btn-danger"><</button>
+                        <button type="button" class="btn btn-danger">1</button>
+                        <button type="button" class="btn btn-danger">></button>
+                        <button type="button" class="btn btn-danger">>></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

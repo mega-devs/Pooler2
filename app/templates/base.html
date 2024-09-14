@@ -99,6 +99,15 @@
               <i class="far fa-th me-2"></i>
               <span data-i18n-text="settings">Settings</span>
             </a>
+            <div class="nav-item dropdown">
+              <a href="#" class="nav-link dropdown-toggle show" data-bs-toggle="dropdown" aria-expanded="true"><i class="far fa-file-alt me-2"></i><span data-i18n-text="debug">Debug</span></a>
+              <div class="dropdown-menu bg-transparent border-0 show" data-bs-popper="none">
+                  <a href="/panel/all_errors" class="dropdown-item {% if active_page == 'all_errors' %}active{% endif %}"><span data-i18n-text="all_errors">All Error</span></a>
+                  <a href="/panel/logs" class="dropdown-item {% if active_page == 'logs' %}active{% endif %}"><span data-i18n-text="logs">Logs</span></a>
+                  <a href="/panel/server" class="dropdown-item {% if active_page == 'server' %}active{% endif %}"><span data-i18n-text="server">Server</span></a>
+                  <a href="/panel/error_logs" class="dropdown-item {% if active_page == 'error_logs' %}active{% endif %}"><span data-i18n-text="error_logs">Error Logs</span></a>
+              </div>
+          </div>
           </div>
         </nav>
       </div>
@@ -237,6 +246,11 @@
             smtpStat: "SMTP STATISTICS",
             tables: "TABLES",
             settings: "SETTINGS",
+            debug: "DEBUG",
+            all_errors: "ALL ERRORS", 
+            logs: "LOGS", 
+            server: "SERVER", 
+            error_logs: "ERROR LOGS",
           },
         },
         de: {
@@ -258,6 +272,11 @@
             smtpStat: "SMTP STATISTIKEN",
             tables: "TISCHE",
             settings: "EINSTELLUNGEN",
+            debug: "DEBUGGEN",
+            all_errors: "ALLE FEHLER", 
+            logs: "PROTOKOLLE", 
+            server: "SERVER", 
+            error_logs: "FEHLERPROTOKOLLE",
           },
         },
       };

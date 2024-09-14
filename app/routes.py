@@ -152,6 +152,26 @@ def panel_settings():
     return render_template('settings.html', active_page="settings")
 
 
+@api.route('/panel/all_errors', methods=['GET', 'POST'])
+def panel_all_errors():
+    return render_template('all_errors.html', active_page="all_errors")
+
+
+@api.route('/panel/logs', methods=['GET', 'POST'])
+def panel_logs():
+    return render_template('logs.html', active_page="logs")
+
+
+@api.route('/panel/server', methods=['GET', 'POST'])
+def panel_server():
+    return render_template('server.html', active_page="server")
+
+
+@api.route('/panel/error_logs', methods=['GET', 'POST'])
+def panel_error_logs():
+    return render_template('error_logs.html', active_page="error_logs")
+
+
 async def check_smtp_emails(filename):
     smtp_driver = SmtpDriver()
     smtp_results = []

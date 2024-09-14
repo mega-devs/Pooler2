@@ -96,3 +96,4 @@ docs/_build/
 db.yml
 
 # Add any other files or directories you want to ignore
+session_name.session
