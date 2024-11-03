@@ -30,7 +30,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'pooler.apps.PoolerConfig'
+    'pooler.apps.PoolerConfig',
+    'users.apps.UsersConfig',
 ]
 
 MIDDLEWARE = [
@@ -66,12 +67,12 @@ WSGI_APPLICATION = 'root.wsgi.application'
 # Database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env('NAME'),
-        "USER": env('USER'),
-        "PASSWORD": env('PASSWORD'),
-        "HOST": env('HOST'),
-        "PORT": env('PORT'),
+        "ENGINE": env("SQL_ENGINE"),
+        "NAME": env('SQL_DATABASE'),
+        "USER": env('SQL_USER'),
+        "PASSWORD": env('SQL_PASSWORD'),
+        "HOST": env('SQL_HOST'),
+        "PORT": env('SQL_PORT'),
     }
 }
 
