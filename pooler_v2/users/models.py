@@ -28,16 +28,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True, verbose_name="is_active")
     is_staff = models.BooleanField(default=False, verbose_name="is_staff")
 
-    # Добавляем поля для групп и прав доступа
+
     groups = models.ManyToManyField(
         Group,
-        related_name='custom_user_set',  # Уникальное имя для обратного аксессора
+        related_name='custom_user_set',
         blank=True
     )
 
     user_permissions = models.ManyToManyField(
         Permission,
-        related_name='custom_user_permissions_set',  # Уникальное имя для обратного аксессора
+        related_name='custom_user_permissions_set',
         blank=True
     )
 
