@@ -12,7 +12,7 @@ import aiofiles
 import requests
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from django.http import JsonResponse, FileResponse, Http404
+from django.http import JsonResponse, FileResponse, Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
