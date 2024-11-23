@@ -12,12 +12,13 @@ import aiofiles
 import requests
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from django.http import JsonResponse, FileResponse, Http404
+from django.http import JsonResponse, FileResponse, Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from telethon import TelegramClient
+from django.contrib.auth import authenticate
 
 from .logging import logger_temp_smtp
 from .utils import extract_country_from_filename, is_valid_telegram_username, SmtpDriver, chunks, ImapDriver
@@ -26,6 +27,21 @@ logger = logging.getLogger(__name__)
 
 api_id = '29719825'
 api_hash = '7fa19eeed8c2e5d35036fafb9a716f18'
+
+
+@require_http_methods(['GET', 'POST'])
+def login(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('panel') #redirect to panel
+        else:
+            return HttpResponse("Invalid credentials", status=401)
+
+    return render(request, "signin.html") #render login page
 
 
 @require_http_methods(["GET"])
@@ -46,6 +62,7 @@ def panel_table(request):
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
     return render(request, 'settings.html', {'active_page': "settings"})
+
 
 
 @csrf_exempt
