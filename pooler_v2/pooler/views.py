@@ -20,7 +20,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from telethon import TelegramClient
 from django.contrib.auth import authenticate
 
-from .logging import logger_temp_smtp
+from .pooler_logging import logger_temp_smtp
 from .utils import extract_country_from_filename, is_valid_telegram_username, SmtpDriver, chunks, ImapDriver
 
 logger = logging.getLogger(__name__)
