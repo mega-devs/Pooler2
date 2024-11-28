@@ -5,7 +5,8 @@ import random
 import re
 import string
 from datetime import datetime, timedelta
-
+from django.db import IntegrityError
+from .models import EmailCheck
 import aiofiles
 import aioimaplib
 import aiosmtplib
@@ -18,70 +19,155 @@ def chunks(lst, n):
 
 
 class SmtpDriver:
+    """
+    A class to handle SMTP connection checking.
+
+    Methods:
+        check_connection(email, password): Checks the SMTP connection for a given email and password.
+    """
+
     async def check_connection(self, email, password):
+        """
+        Check the SMTP connection for a given email and password.
+
+        Args:
+            email (str): Email address to check.
+            password (str): Password for the email address.
+
+        Returns:
+            dict: Connection status and port information.
+        """
         try:
+            # Load SMTP service and port configurations
             async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpservices.json'), 'r') as f:
                 content = await f.read()
-                data = json.loads(content)
-                email_domain = email.split('@')[1]
+                smtp_services = json.loads(content)
 
-                async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpports.json'), 'r') as f:
-                    content = await f.read()
-                    smtp_ports = json.loads(content)['smtpports']
+            async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpports.json'), 'r') as f:
+                content = await f.read()
+                smtp_ports = json.loads(content)['smtpports']
 
-                for port in smtp_ports:
-                    host = data["smtpservices"][email_domain].split(':')[0]
-                    smtp_server = aiosmtplib.SMTP(hostname=host, port=port, start_tls=True, timeout=10)
-                    try:
-                        print(f"[SMTP] Trying {host}:{port}")
-                        await smtp_server.connect()
-                        await smtp_server.login(email, password)
-                        await smtp_server.quit()
-                        return {'status': 'valid', 'port': port}
-                    except aiosmtplib.SMTPAuthenticationError as e:
-                        print(f"[SMTP] {str(e)}")
-                        await smtp_server.quit()
-                    except Exception as e:
-                        print(f"[SMTP] {str(e)}")
-                        pass
-                return {'status': 'dead'}
+            email_domain = email.split('@')[1]
+            host = smtp_services["smtpservices"].get(email_domain, None)
+
+            if not host:
+                raise ValueError(f"No SMTP service found for domain: {email_domain}")
+
+            for port in smtp_ports:
+                smtp_server = aiosmtplib.SMTP(hostname=host.split(':')[0], port=port, start_tls=True, timeout=10)
+                try:
+                    print(f"[SMTP] Trying {host}:{port}")
+                    await smtp_server.connect()
+                    await smtp_server.login(email, password)
+                    await smtp_server.quit()
+
+                    # Save result to the database
+                    EmailCheck.objects.create(
+                        email=email,
+                        status='valid',
+                        check_type='SMTP',
+                    )
+                    return {'status': 'valid', 'port': port}
+                except aiosmtplib.SMTPAuthenticationError:
+                    await smtp_server.quit()
+                except Exception as e:
+                    print(f"[SMTP] {str(e)}")
+                    pass
+
+            # If all ports fail
+            EmailCheck.objects.create(
+                email=email,
+                status='invalid',
+                check_type='SMTP',
+            )
+            return {'status': 'invalid'}
         except Exception as e:
-            print(f"[SMTP] {str(e)}")
-            return {'status': 'dead'}
+            # Save error to the database
+            try:
+                EmailCheck.objects.create(
+                    email=email,
+                    status='error',
+                    check_type='SMTP',
+                )
+            except IntegrityError:
+                pass  # Ignore if email already exists in the database
+            return {'status': 'error', 'error': str(e)}
 
 
 class ImapDriver:
+    """
+    A class to handle IMAP connection checking.
+
+    Methods:
+        check_connection(email, password): Checks the IMAP connection for a given email and password.
+    """
+
     async def check_connection(self, email, password):
+        """
+        Check the IMAP connection for a given email and password.
+
+        Args:
+            email (str): Email address to check.
+            password (str): Password for the email address.
+
+        Returns:
+            dict: Connection status and port information.
+        """
         try:
+            # Load IMAP service and port configurations
             async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_imapservices.json'), 'r') as f:
                 content = await f.read()
-                data = json.loads(content)
-                email_domain = email.split('@')[1]
+                imap_services = json.loads(content)
 
-                async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_imapports.json'), 'r') as f:
-                    content = await f.read()
-                    imap_ports = json.loads(content)['imapports']
+            async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_imapports.json'), 'r') as f:
+                content = await f.read()
+                imap_ports = json.loads(content)['imapports']
 
-                for port in imap_ports:
-                    host = data["imapservices"][email_domain].split(':')[0]
-                    imap_server = aioimaplib.IMAP4_SSL(host, port, timeout=10)
-                    try:
-                        print(f"[IMAP] Trying {host}:{port}")
-                        await imap_server.wait_hello_from_server()
-                        response = await imap_server.login(email, password)
-                        await imap_server.logout()
-                        if response.result == "OK":
-                            return {'status': 'valid', 'port': port}
-                    except aioimaplib.AioImapException as e:
-                        print(f"[IMAP] {str(e)}")
-                        await imap_server.close()
-                    except Exception as e:
-                        print(f"[IMAP] {str(e)}")
-                        pass
-                return {'status': 'dead'}
+            email_domain = email.split('@')[1]
+            host = imap_services["imapservices"].get(email_domain, None)
+
+            if not host:
+                raise ValueError(f"No IMAP service found for domain: {email_domain}")
+
+            for port in imap_ports:
+                imap_server = aioimaplib.IMAP4_SSL(host, port, timeout=10)
+                try:
+                    print(f"[IMAP] Trying {host}:{port}")
+                    await imap_server.wait_hello_from_server()
+                    response = await imap_server.login(email, password)
+                    await imap_server.logout()
+                    if response.result == "OK":
+                        # Save result to the database
+                        EmailCheck.objects.create(
+                            email=email,
+                            status='valid',
+                            check_type='IMAP',
+                        )
+                        return {'status': 'valid', 'port': port}
+                except aioimaplib.AioImapException:
+                    await imap_server.close()
+                except Exception as e:
+                    print(f"[IMAP] {str(e)}")
+                    pass
+
+            # If all ports fail
+            EmailCheck.objects.create(
+                email=email,
+                status='invalid',
+                check_type='IMAP',
+            )
+            return {'status': 'invalid'}
         except Exception as e:
-            print(f"[IMAP] {str(e)}")
-            return {'status': 'dead'}
+            # Save error to the database
+            try:
+                EmailCheck.objects.create(
+                    email=email,
+                    status='error',
+                    check_type='IMAP',
+                )
+            except IntegrityError:
+                pass  # Ignore if email already exists in the database
+            return {'status': 'error', 'error': str(e)}
 
 
 # Function to check if a datetime object is recent
