@@ -7,7 +7,7 @@ import re
 import zipfile
 from asyncio import gather
 from datetime import datetime
-
+import chardet
 import aiofiles
 import requests
 from django.conf import settings
@@ -323,16 +323,22 @@ async def get_combofiles_from_tg(request):
             os.remove(file)
 
 
+
 def remove_duplicate_lines(file_path):
-    with open(file_path, 'r') as f:
-        lines = f.readlines()
+    try:
+        with open(file_path, 'rb') as f:
+            raw_data = f.read()
+            encoding = chardet.detect(raw_data)['encoding']
+            lines = raw_data.decode(encoding).splitlines()
 
-    unique_lines = list(set(lines))
+        unique_lines = list(set(lines))
 
-    with open(file_path, 'w') as f:
-        f.writelines(unique_lines)
+        with open(file_path, 'w', encoding=encoding) as f:
+            f.write('\n'.join(unique_lines))
 
-    return len(lines) - len(unique_lines)
+        return len(lines) - len(unique_lines)
+    except Exception as e:
+        raise e
 
 
 @require_POST
