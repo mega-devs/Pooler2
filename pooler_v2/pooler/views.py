@@ -19,7 +19,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from telethon import TelegramClient
 from django.contrib.auth import authenticate
-
+from django.contrib.auth.decorators import login_required
 from .pooler_logging import logger_temp_smtp
 from .utils import extract_country_from_filename, is_valid_telegram_username, SmtpDriver, chunks, ImapDriver
 
@@ -49,16 +49,19 @@ def redirect_to_panel(request):
     return redirect(reverse('panel'))
 
 
+@login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel(request):
     return render(request, 'index.html', {'active_page': "dashboard"})
 
 
+@login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_table(request):
     return render(request, 'tables.html', {'active_page': "tables"})
 
 
+@login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
     return render(request, 'settings.html', {'active_page': "settings"})
