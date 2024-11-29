@@ -4,11 +4,6 @@ from .models import User
 
 
 class UserRegisterForm(UserCreationForm):
-    phone = forms.CharField(
-        max_length=15,
-        required=True,
-        widget=forms.TextInput(attrs={"placeholder": "Enter your phone number"}),
-    )
     avatar = forms.ImageField(required=False)
     country = forms.CharField(
         max_length=50,
@@ -18,7 +13,7 @@ class UserRegisterForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ['email', 'phone', 'avatar', 'country', 'password1', 'password2']
+        fields = ['email', 'country', 'password1', 'password2']
 
 
 
