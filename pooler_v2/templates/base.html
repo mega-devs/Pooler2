@@ -2,6 +2,11 @@
 
 <!DOCTYPE html>
 <html lang="en">
+{% if request.GET.success %}
+<script>
+    alert("{{ request.GET.success }}");
+</script>
+{% endif %}
 <head>
     <meta charset="utf-8"/>
     <title>{% block title %}Pooler{% endblock %}</title>

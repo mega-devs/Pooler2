@@ -5,72 +5,82 @@
 {% block dashboard %}
 <div id="dashboard" class="container-fluid pt-4 px-4">
     <div class="bg-secondary text-center rounded p-4">
-      <div class="d-flex align-items-center justify-content-between mb-4">
-        <h4 class="mb-0" data-i18n-text="addFile">ADD FILE</h4>
-        <label for="file-input" class="btn btn-sm btn-danger">
-          <input
-            type="file"
-            id="file-input"
-            class="d-none"
-            data-i18n-text="chooseFile"
-          />
-          Choose file
-        </label>
-      </div>
-      <br />
-      <div class="d-flex align-items-center justify-content-between mb-4">
-        <h4 class="mb-0 mr-3" style="white-space: nowrap">
-          ADD FILE BY URL
-        </h4>
-        <div class="input-group w-50" style="margin-right: 1em">
-          <input
-            type="text"
-            id="url-input"
-            class="form-control"
-            placeholder="Enter URL"
-            data-i18n-text="enterUrl"
-            style="margin-right: 1em"
-          />
-          <div class="input-group-append">
-            <button
-              class="btn btn-primary"
-              type="button"
-              id="fetch-url-button"
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h4 class="mb-0" data-i18n-text="addFile">ADD FILE</h4>
+            <form
+                action="/upload_combofile/"
+                method="POST"
+                enctype="multipart/form-data"
+                id="upload-form"
+                style="display: flex; flex-direction: column; align-items: flex-start;"
             >
-              Add
-            </button>
-          </div>
+                {% csrf_token %}
+                <label for="file-input" class="btn btn-sm btn-danger">
+                    <input
+                        type="file"
+                        id="file-input"
+                        name="file"
+                        class="d-none"
+                        onchange="document.getElementById('upload-form').submit()"
+                    />
+                    Choose file
+                </label>
+            </form>
         </div>
-      </div>
-      <div class="d-flex align-items-center justify-content-between mb-4">
-        <h4 class="mb-0 mr-3" style="white-space: nowrap">
-          ADD TELEGRAM
-        </h4>
-        <div class="input-group w-50" style="margin-right: 1em">
-          <input
-            type="text"
-            id="tg-url-input"
-            class="form-control"
-            placeholder="Enter Telegram URL or Username"
-            data-i18n-text="enterTgUrl"
-            style="margin-right: 1em"
-          />
-          <div class="input-group-append">
-            <button
-              class="btn btn-primary"
-              type="button"
-              id="fetch-tg-button"
-            >
-              Add
-            </button>
-          </div>
+        <br />
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h4 class="mb-0 mr-3" style="white-space: nowrap">
+                ADD FILE BY URL
+            </h4>
+            <div class="input-group w-50" style="margin-right: 1em">
+                <input
+                    type="text"
+                    id="url-input"
+                    class="form-control"
+                    placeholder="Enter URL"
+                    data-i18n-text="enterUrl"
+                    style="margin-right: 1em"
+                />
+                <div class="input-group-append">
+                    <button
+                        class="btn btn-primary"
+                        type="button"
+                        id="fetch-url-button"
+                    >
+                        Add
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
-      <hr />
-      <div class="d-flex align-items-center justify-content-between mb-4">
-        <h4 class="mb-0" data-i18n-text="fileList">FILE LIST</h4>
-        <div id="file-list"></div>
-      </div>
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h4 class="mb-0 mr-3" style="white-space: nowrap">
+                ADD TELEGRAM
+            </h4>
+            <div class="input-group w-50" style="margin-right: 1em">
+                <input
+                    type="text"
+                    id="tg-url-input"
+                    class="form-control"
+                    placeholder="Enter Telegram URL or Username"
+                    data-i18n-text="enterTgUrl"
+                    style="margin-right: 1em"
+                />
+                <div class="input-group-append">
+                    <button
+                        class="btn btn-primary"
+                        type="button"
+                        id="fetch-tg-button"
+                    >
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+        <hr />
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h4 class="mb-0" data-i18n-text="fileList">FILE LIST</h4>
+            <div id="file-list"></div>
+        </div>
     </div>
 </div>
 {% endblock %}

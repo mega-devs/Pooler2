@@ -128,3 +128,7 @@ AUTH_USER_MODEL = 'users.User'
 LOGIN_URL = "users:login"
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+APPEND_SLASH = False
+
+UPLOAD_ROOT = os.path.join(BASE_DIR, 'uploads')

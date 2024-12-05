@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import logging
+import mimetypes
 import os
 import re
 import zipfile
@@ -12,7 +13,7 @@ import aiofiles
 import requests
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from django.http import JsonResponse, FileResponse, Http404, HttpResponse
+from django.http import JsonResponse, FileResponse, Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
@@ -20,8 +21,12 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from telethon import TelegramClient
 from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
+from .models import UploadedFile
 from .pooler_logging import logger_temp_smtp
+from .service import determine_origin, handle_archive
 from .utils import extract_country_from_filename, is_valid_telegram_username, SmtpDriver, chunks, ImapDriver
+import mimetypes
+
 
 logger = logging.getLogger(__name__)
 
@@ -329,19 +334,36 @@ async def get_combofiles_from_tg(request):
 
 def remove_duplicate_lines(file_path):
     try:
+        # Определяем тип файла
+        mime_type = mimetypes.guess_type(file_path)[0]
+        if not mime_type or not mime_type.startswith("text"):
+            raise ValueError("Invalid file type. Only text files are supported for removing duplicates.")
+
+        # Определяем кодировку файла
         with open(file_path, 'rb') as f:
             raw_data = f.read()
-            encoding = chardet.detect(raw_data)['encoding']
+            detection = chardet.detect(raw_data)
+            encoding = detection.get('encoding', 'utf-8')  # По умолчанию 'utf-8'
+
+            if encoding is None:
+                raise ValueError("Unable to detect file encoding")
+
+            # Читаем строки файла в указанной кодировке
             lines = raw_data.decode(encoding).splitlines()
 
+        # Убираем дубликаты строк
         unique_lines = list(set(lines))
 
+        # Перезаписываем файл уникальными строками в той же кодировке
         with open(file_path, 'w', encoding=encoding) as f:
             f.write('\n'.join(unique_lines))
 
+        # Возвращаем количество удалённых строк
         return len(lines) - len(unique_lines)
     except Exception as e:
-        raise e
+        logging.error(f"Error removing duplicate lines: {e}")
+        raise
+
 
 
 @require_POST
@@ -353,24 +375,56 @@ def upload_combofile(request):
     if not file.name:
         return JsonResponse({'status': 404, 'error': 'No file selected'})
 
-    filename = file.name.replace(" ", "_")
-    country = extract_country_from_filename(filename)
+    filename = file.name.replace(" ", "_")  # Получаем имя файла
+    origin = determine_origin(filename)  # Определяем происхождение файла
 
-    if country:
-        save_path = os.path.join(settings.BASE_DIR, 'app', 'data', 'combofiles', country)
+    # Извлекаем страну или категорию файла
+    if "gmail" in filename.lower() or "yahoo" in filename.lower():
+        category = "major_providers"
     else:
-        save_path = os.path.join(settings.BASE_DIR, 'app', 'data', 'combofiles')
+        category = "private_providers"
 
-    os.makedirs(save_path, exist_ok=True)
+    save_path = os.path.join(settings.BASE_DIR, 'uploads', category)
 
-    file_path = os.path.join(save_path, filename)
-    fs = FileSystemStorage(location=save_path)
-    fs.save(filename, file)
+    try:
+        # Создаём директорию для сохранения файла
+        os.makedirs(save_path, exist_ok=True)
 
-    num_duplicates = remove_duplicate_lines(file_path)
-    print(f"Removed {num_duplicates} duplicate lines from {filename}")
+        file_path = os.path.join(save_path, filename)
+        fs = FileSystemStorage(location=save_path)
+        fs.save(filename, file)  # Сохраняем файл
 
-    return JsonResponse({'status': 200, 'filename': filename})
+        # Определяем MIME-тип файла
+        mime_type, _ = mimetypes.guess_type(file_path)
+
+        # Если файл является архивом, разархивируем его
+        if mime_type == 'application/zip':
+            handle_archive(file_path, save_path)
+            print(f"Archive '{filename}' successfully extracted to {save_path}")
+
+        # Если файл текстовый, удаляем дубликаты строк
+        elif mime_type and mime_type.startswith("text"):
+            num_duplicates = remove_duplicate_lines(file_path)
+            print(f"Removed {num_duplicates} duplicate lines from {filename}")
+        else:
+            print(f"File '{filename}' is not a text file or archive. Skipping additional processing.")
+
+        # Сохраняем информацию о файле в модели
+        uploaded_file = UploadedFile.objects.create(
+            filename=filename,
+            file_path=file_path,
+            country=category,
+            duplicate_count=num_duplicates if 'num_duplicates' in locals() else 0,
+            origin=origin,
+        )
+
+        # Возвращаем на главную страницу с уведомлением
+        return HttpResponseRedirect(f"{reverse('panel')}?success=File '{filename}' uploaded successfully!")
+
+    except Exception as e:
+        logging.error(f"Error uploading file: {e}")
+        return JsonResponse({'status': 500, 'error': str(e)})
+
 
 
 @require_GET

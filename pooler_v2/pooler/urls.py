@@ -15,7 +15,7 @@ urlpatterns = [
     path('clear_temp_logs/', views.clear_temp_logs, name='clear_temp_logs'),
     path('clear_full_logs/', views.clear_full_logs, name='clear_full_logs'),
     path('get_combofiles_from_tg/', views.get_from_tg, name='get_combofiles_from_tg'),
-    path('api/upload_combofile/', views.upload_combofile, name='upload_combofile'),
+    path('upload_combofile/', views.upload_combofile, name='upload_combofile'),  # Удалил `/api/`
     path('download_combofile/<str:filename>/', views.download_file, name='download_file'),
     path('download_full_logs/', views.download_logs_file, name='download_logs_file'),
 ]
