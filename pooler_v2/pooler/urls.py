@@ -1,7 +1,7 @@
 from django.urls import path
 
 from . import views
-
+from .views import uploaded_files_list, uploaded_file_update, uploaded_file_delete
 
 urlpatterns = [
     path('', views.redirect_to_panel, name='redirect_to_panel'),
@@ -18,4 +18,8 @@ urlpatterns = [
     path('upload_combofile/', views.upload_combofile, name='upload_combofile'),  # Удалил `/api/`
     path('download_combofile/<str:filename>/', views.download_file, name='download_file'),
     path('download_full_logs/', views.download_logs_file, name='download_logs_file'),
+    path('files/', uploaded_files_list, name='uploaded_files_list'),
+    path('files/<int:pk>/edit/', uploaded_file_update, name='uploaded_file_update'),
+    path('files/<int:pk>/delete/', uploaded_file_delete, name='uploaded_file_delete'),
+    path('uploaded-files/', uploaded_files_list, name='uploaded_files_list'),
 ]

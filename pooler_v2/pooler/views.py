@@ -14,7 +14,7 @@ import requests
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse, FileResponse, Http404, HttpResponse, HttpResponseRedirect
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
@@ -26,6 +26,7 @@ from .pooler_logging import logger_temp_smtp
 from .service import determine_origin, handle_archive
 from .utils import extract_country_from_filename, is_valid_telegram_username, SmtpDriver, chunks, ImapDriver
 import mimetypes
+from .forms import UploadedFileForm
 
 
 logger = logging.getLogger(__name__)
@@ -400,14 +401,18 @@ def upload_combofile(request):
         # Если файл является архивом, разархивируем его
         if mime_type == 'application/zip':
             handle_archive(file_path, save_path)
-            print(f"Archive '{filename}' successfully extracted to {save_path}")
+            logging.info(f"Archive '{filename}' successfully extracted to {save_path}")
 
         # Если файл текстовый, удаляем дубликаты строк
         elif mime_type and mime_type.startswith("text"):
             num_duplicates = remove_duplicate_lines(file_path)
-            print(f"Removed {num_duplicates} duplicate lines from {filename}")
+            logging.info(f"Removed {num_duplicates} duplicate lines from {filename}")
         else:
-            print(f"File '{filename}' is not a text file or archive. Skipping additional processing.")
+            logging.info(f"File '{filename}' is not a text file or archive. Skipping additional processing.")
+
+        # Проверяем, авторизован ли пользователь
+        if not request.user.is_authenticated:
+            return JsonResponse({'status': 403, 'error': 'User is not authenticated.'})
 
         # Сохраняем информацию о файле в модели
         uploaded_file = UploadedFile.objects.create(
@@ -416,6 +421,7 @@ def upload_combofile(request):
             country=category,
             duplicate_count=num_duplicates if 'num_duplicates' in locals() else 0,
             origin=origin,
+            user=request.user  # Привязываем файл к текущему пользователю
         )
 
         # Возвращаем на главную страницу с уведомлением
@@ -424,7 +430,6 @@ def upload_combofile(request):
     except Exception as e:
         logging.error(f"Error uploading file: {e}")
         return JsonResponse({'status': 500, 'error': str(e)})
-
 
 
 @require_GET
@@ -555,3 +560,40 @@ async def check_imap_emails(filename):
             await asyncio.gather(*tasks)
 
     return imap_results
+
+
+################################################################
+@login_required
+def uploaded_files_list(request):
+    """Просмотр списка собственных загруженных файлов."""
+    user_files = UploadedFile.objects.filter(user=request.user)
+    return render(request, 'uploaded_files_list.html', {'uploaded_files': user_files})
+
+
+@login_required
+def uploaded_file_update(request, pk):
+    """Обновление информации о загруженном файле."""
+    try:
+        file_obj = UploadedFile.objects.get(pk=pk, user=request.user)
+    except UploadedFile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'File not found or permission denied.'}, status=403)
+
+    if request.method == 'POST':
+        form = UploadedFileForm(request.POST, instance=file_obj)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('uploaded_files_list'))  # Редирект на список файлов
+    else:
+        form = UploadedFileForm(instance=file_obj)
+
+    return render(request, 'uploaded_files_form.html', {'form': form, 'file': file_obj})
+
+
+@login_required
+def uploaded_file_delete(request, pk):
+    """Удаление загруженного файла."""
+    file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
+    if request.method == 'POST':
+        file_obj.delete()
+        return redirect('uploaded_files_list')  # Редирект на список файлов
+    return render(request, 'uploaded_file_confirm_delete.html', {'file': file_obj})

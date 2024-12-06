@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Uploaded Files - Pooler{% endblock %}
+
+{% block dashboard %}
+<div class="container-fluid pt-4 px-4">
+    <div class="bg-dark text-center rounded p-4">
+        <h4 class="mb-4 text-white">Your Uploaded Files</h4>
+        {% if uploaded_files %}
+            {% for file in uploaded_files %}
+                <div class="card mb-3 text-dark">
+                    <div class="card-body bg-light">
+                        <h5 class="card-title">Filename: {{ file.filename }}</h5>
+                        <p><strong>Country:</strong> {{ file.country|default:"N/A" }}</p>
+                        <p><strong>Origin:</strong> {{ file.get_origin_display }}</p>
+                        <p><strong>Upload Date:</strong> {{ file.upload_date }}</p>
+                        <p><strong>Checked:</strong> {{ file.is_checked|yesno:"Yes,No" }}</p>
+                        <div>
+                            <a href="{% url 'uploaded_file_update' file.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="{% url 'uploaded_file_delete' file.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-white">No files found.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

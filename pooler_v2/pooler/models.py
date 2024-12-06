@@ -1,6 +1,9 @@
 from django.db import models
 from django.utils.timezone import now
 
+from users.models import User
+
+
 class EmailCheck(models.Model):
     CHECK_TYPE_CHOICES = [
         ('SMTP', 'SMTP'),
@@ -39,6 +42,7 @@ class UploadedFile(models.Model):
     duplicate_count = models.PositiveIntegerField(default=0)
     origin = models.CharField(max_length=50, choices=MANAGEMENT_ORIGINS, default='MANUAL')
     is_checked = models.BooleanField(default=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_files')
 
     def __str__(self):
         return f"{self.filename} ({self.origin}) - {self.upload_date}"
