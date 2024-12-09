@@ -23,10 +23,10 @@
             <ul class="navbar-nav ms-auto">
                 {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link btn btn-sm btn-primary text-white" href="{% url 'uploaded_files_list' %}">Upload Files</a>
+                        <a class="nav-link btn btn-sm btn-primary text-white" href="{% url 'files:uploaded_files_list' %}">Upload Files</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'panel' %}">Dashboard</a>
+                        <a class="nav-link" href="{% url 'pooler:panel' %}">Dashboard</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link btn btn-sm btn-danger text-white" href="{% url 'users:logout' %}">Logout</a>
@@ -113,42 +113,46 @@
     </div>
     <!-- Spinner End -->
 
-    <!-- Sidebar Start -->
-    <div class="sidebar pe-4 pb-3">
-        <nav class="navbar bg-secondary navbar-dark">
-            <a href="/panel" class="navbar-brand mx-4 mb-3">
-                <h3 class="text-primary"><i class="fas fa-envelope"></i>Pooler</h3>
+<!-- Sidebar Start -->
+<div class="sidebar pe-4 pb-3">
+    <nav class="navbar bg-secondary navbar-dark">
+        <a href="{% url 'pooler:panel' %}" class="navbar-brand mx-4 mb-3">
+            <h3 class="text-primary"><i class="fas fa-envelope"></i>Pooler</h3>
+        </a>
+        <div class="navbar-nav w-100">
+            <a
+                href="{% url 'pooler:panel' %}"
+                class="nav-item nav-link {% if active_page == 'dashboard' %}active{% endif %}"
+            >
+                <i class="fa fa-tachometer-alt me-2"></i>
+                <span data-i18n-text="dashboard">Dashboard</span>
             </a>
-            <div class="navbar-nav w-100">
-                <a
-                        href="/panel"
-                        class="nav-item nav-link {% if active_page == 'dashboard' %}active{% endif %}"
-                >
-                    <i class="fa fa-tachometer-alt me-2"></i>
-                    <span data-i18n-text="dashboard">Dashboard</span>
-                </a>
-                <a href="/panel#console_logs" class="nav-item nav-link">
-                    <i class="far fa-file-alt me-2"></i>
-                    <span data-i18n-text="logs">Logs</span>
-                </a>
-                <a
-                        href="/panel/tables"
-                        class="nav-item nav-link {% if active_page == 'tables' %}active{% endif %}"
-                >
-                    <i class="far fa-table me-2"></i>
-                    <span data-i18n-text="tables">Tables</span>
-                </a>
-                <a
-                        href="/panel/settings"
-                        class="nav-item nav-link {% if active_page == 'settings' %}active{% endif %}"
-                >
-                    <i class="far fa-th me-2"></i>
-                    <span data-i18n-text="settings">Settings</span>
-                </a>
-            </div>
-        </nav>
-    </div>
-    <!-- Sidebar End -->
+
+            <!-- Ссылка на логи: скролл до блока -->
+            <a href="{% url 'pooler:panel' %}#console_logs" class="nav-item nav-link">
+                <i class="far fa-file-alt me-2"></i>
+                <span data-i18n-text="logs">Logs</span>
+            </a>
+
+            <a
+                href="{% url 'pooler:panel_table' %}"
+                class="nav-item nav-link {% if active_page == 'tables' %}active{% endif %}"
+            >
+                <i class="far fa-table me-2"></i>
+                <span data-i18n-text="tables">Tables</span>
+            </a>
+
+            <a
+                href="{% url 'pooler:panel_settings' %}"
+                class="nav-item nav-link {% if active_page == 'settings' %}active{% endif %}"
+            >
+                <i class="far fa-th me-2"></i>
+                <span data-i18n-text="settings">Settings</span>
+            </a>
+        </div>
+    </nav>
+</div>
+<!-- Sidebar End -->
 
     <!-- Content Start -->
     <div class="content">

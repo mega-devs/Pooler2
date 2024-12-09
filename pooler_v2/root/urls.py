@@ -9,5 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('pooler.urls')),
     path('users/', include('users.urls')),
+    path('api/', include('files.urls')),
+    path('api/', include('telegram.urls')),
 
 ]

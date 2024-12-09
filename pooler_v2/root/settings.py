@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'pooler.apps.PoolerConfig',
     'users.apps.UsersConfig',
+    'files.apps.FilesConfig',
+    'telegram.apps.TelegramConfig',
 ]
 
 MIDDLEWARE = [

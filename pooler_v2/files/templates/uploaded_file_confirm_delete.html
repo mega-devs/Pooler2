@@ -14,7 +14,7 @@
                     <form method="post">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger">Delete</button>
-                        <a href="{% url 'uploaded_files_list' %}" class="btn btn-secondary">Cancel</a>
+                        <a href="{% url 'files:uploaded_files_list' %}" class="btn btn-secondary">Cancel</a>
                     </form>
                 </div>
             </div>

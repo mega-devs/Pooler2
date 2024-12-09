@@ -8,7 +8,7 @@
         <div class="d-flex align-items-center justify-content-between mb-4">
             <h4 class="mb-0" data-i18n-text="addFile">ADD FILE</h4>
             <form
-                action="/upload_combofile/"
+                action="{% url 'files:upload_combofile' %}"
                 method="POST"
                 enctype="multipart/form-data"
                 id="upload-form"
