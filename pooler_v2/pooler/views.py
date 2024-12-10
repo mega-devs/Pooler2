@@ -20,6 +20,7 @@ from .pooler_logging import logger_temp_smtp
 from .utils import extract_country_from_filename, SmtpDriver, chunks, ImapDriver
 import mimetypes
 from django.urls import reverse_lazy
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 
 logger = logging.getLogger(__name__)
@@ -123,7 +124,8 @@ async def process_chunk(chunk, driver, results):
         if cred.count(":") != 1:
             continue
 
-        email, password = cred.strip().split(":")
+        smtp_server, data = cred.strip().split(":")
+        smtp_port, email, password = data.split(",")
 
         try:
             status = await driver.check_connection(email, password)
@@ -177,7 +179,7 @@ async def check_smtp_emails(filename):
                         lines = f.readlines()
                         chunk_size = 100
                         chunked_lines = list(chunks(lines, chunk_size))
-                        tasks = [process_chunk(chunk, smtp_driver, smtp_results, logger_temp_smtp) for chunk in
+                        tasks = [process_chunk(chunk, smtp_driver, smtp_results) for chunk in
                                  chunked_lines]
                         await gather(*tasks)
     else:
@@ -185,7 +187,7 @@ async def check_smtp_emails(filename):
             lines = await f.readlines()
             chunk_size = 100
             chunked_lines = list(chunks(lines, chunk_size))
-            tasks = [process_chunk(chunk, smtp_driver, smtp_results, logger_temp_smtp) for chunk in chunked_lines]
+            tasks = [process_chunk(chunk, smtp_driver, smtp_results) for chunk in chunked_lines]
             await gather(*tasks)
 
     return smtp_results
