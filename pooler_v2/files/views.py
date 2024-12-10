@@ -200,7 +200,7 @@ def uploaded_file_update(request, pk):
         form = UploadedFileForm(request.POST, instance=file_obj)
         if form.is_valid():
             form.save()
-            return redirect(reverse('files:uploaded_files_list'))  # Редирект на список файлов
+            return redirect(reverse('files:uploaded_files_list'))
     else:
         form = UploadedFileForm(instance=file_obj)
 
@@ -213,5 +213,5 @@ def uploaded_file_delete(request, pk):
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
     if request.method == 'POST':
         file_obj.delete()
-        return redirect('files:uploaded_files_list')  # Редирект на список файлов
+        return redirect('files:uploaded_files_list')
     return render(request, 'uploaded_file_confirm_delete.html', {'file': file_obj})
