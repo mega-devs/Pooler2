@@ -29,3 +29,23 @@ class UploadedFile(models.Model):
         verbose_name = "Uploaded File"
         verbose_name_plural = "Uploaded Files"
         ordering = ["-upload_date"]
+
+
+class ExtractedData(models.Model):
+    email = models.CharField(max_length=255)
+    password = models.CharField(max_length=255)
+    provider = models.CharField(max_length=100)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    filename = models.CharField(max_length=255, null=True, blank=True)
+    uploaded_file = models.ForeignKey(
+        'UploadedFile', on_delete=models.CASCADE, related_name='extracted_data'
+    )
+    smtp_is_valid = models.BooleanField(null=True, blank=True, default=None)
+    imap_is_valid = models.BooleanField(null=True, blank=True, default=None)
+
+    def __str__(self):
+        return f"{self.email} - {self.provider} ({self.country})"
+
+    class Meta:
+        verbose_name = "Extracted Data"
+        verbose_name_plural = "Extracted Data"

@@ -54,7 +54,7 @@ def panel(request):
 
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
-def panel_table(request):
+def panel_table_placeholder(request):
     return render(request, 'tables.html', {'active_page': "tables"})
 
 
