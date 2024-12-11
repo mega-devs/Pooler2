@@ -32,6 +32,14 @@ class UploadedFile(models.Model):
 
 
 class ExtractedData(models.Model):
+    ORIGINS = [
+        ('SMTP', 'SMTP Server'),
+        ('IMAP', 'IMAP Server'),
+        ('MANUAL', 'Manual Upload'),
+        ('TELEGRAM', 'Telegram'),
+        ('UNKNOWN', 'Unknown'),
+    ]
+
     email = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
     provider = models.CharField(max_length=100)
@@ -39,6 +47,9 @@ class ExtractedData(models.Model):
     filename = models.CharField(max_length=255, null=True, blank=True)
     uploaded_file = models.ForeignKey(
         'UploadedFile', on_delete=models.CASCADE, related_name='extracted_data'
+    )
+    upload_origin = models.CharField(
+        max_length=50, choices=ORIGINS, default='UNKNOWN'
     )
     smtp_is_valid = models.BooleanField(null=True, blank=True, default=None)
     imap_is_valid = models.BooleanField(null=True, blank=True, default=None)

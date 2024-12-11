@@ -23,5 +23,24 @@ services:
     volumes:
       - ./uploads:/app/uploads
 
+  redis:
+    image: redis:alpine
+    container_name: pooler_redis
+    ports:
+      - "6379:6379"
+
+  celery:
+    build:
+      context: .
+    container_name: pooler_celery
+    command: celery -A root worker --loglevel=info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
 volumes:
   postgres_data:
