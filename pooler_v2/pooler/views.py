@@ -3,9 +3,9 @@ import io
 import json
 import logging
 import os
+
 import zipfile
-from asyncio import gather
-from datetime import datetime
+
 import chardet
 import aiofiles
 import requests
@@ -17,9 +17,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.contrib.auth.decorators import login_required
 from .pooler_logging import logger_temp_smtp
-from .utils import extract_country_from_filename, SmtpDriver, chunks, ImapDriver
+from .utils import extract_country_from_filename, SmtpDriver, chunks, ImapDriver, get_email_bd_data, check_smtp_emails_from_db
+from files.models import ExtractedData
 import mimetypes
 from django.urls import reverse_lazy
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 
 logger = logging.getLogger(__name__)
@@ -107,36 +109,13 @@ def upload_file_by_url(request):
 async def check_emails_view(request, filename):
     try:
         smtp_results, imap_results = await asyncio.gather(
-            check_smtp_emails(filename),
+            check_smtp_emails_from_zip(filename),
             check_imap_emails(filename)
         )
         result = {'smtp_results': smtp_results, 'imap_results': imap_results}
         return JsonResponse(result)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-
-async def process_chunk(chunk, driver, results):
-    for cred in chunk:
-        if "@" not in cred:
-            continue
-        if cred.count(":") != 1:
-            continue
-
-        email, password = cred.strip().split(":")
-
-        try:
-            status = await driver.check_connection(email, password)
-            if status['status'] == 'valid':
-                results.append(status)
-
-            logger.info({'email': email,
-                         'password': password,
-                         'valid': status['status'],
-                         'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
-
-        except Exception as e:
-            logger.error(f"Error checking connection for email {email}: {e}")
 
 
 async def parse_messages(client, channel):
@@ -161,34 +140,6 @@ async def read_existing_messages(filename):
 async def write_messages(filename, messages):
     async with aiofiles.open(filename, 'w', encoding='utf-8') as f:
         await f.write(json.dumps(messages, ensure_ascii=False, indent=4))
-
-
-async def check_smtp_emails(filename):
-    smtp_driver = SmtpDriver()
-    smtp_results = []
-
-    file_path = os.path.join(settings.MEDIA_ROOT, "combofiles", filename)
-
-    if filename.endswith('.zip'):
-        with zipfile.ZipFile(file_path, 'r') as zip_file:
-            for zip_info in zip_file.infolist():
-                if not zip_info.is_dir():
-                    with io.TextIOWrapper(zip_file.open(zip_info), encoding='utf-8') as f:
-                        lines = f.readlines()
-                        chunk_size = 100
-                        chunked_lines = list(chunks(lines, chunk_size))
-                        tasks = [process_chunk(chunk, smtp_driver, smtp_results, logger_temp_smtp) for chunk in
-                                 chunked_lines]
-                        await gather(*tasks)
-    else:
-        async with aiofiles.open(file_path, 'r') as f:
-            lines = await f.readlines()
-            chunk_size = 100
-            chunked_lines = list(chunks(lines, chunk_size))
-            tasks = [process_chunk(chunk, smtp_driver, smtp_results, logger_temp_smtp) for chunk in chunked_lines]
-            await gather(*tasks)
-
-    return smtp_results
 
 
 async def read_logs(ind):
@@ -305,18 +256,16 @@ def download_logs_file(request):
 
 
 @require_GET
-def check_emails_route(request, filename):
+def check_smtp_emails_route(request):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     try:
         tasks = [
-            asyncio.ensure_future(check_smtp_emails(filename)),
-            asyncio.ensure_future(check_imap_emails(filename))
+            asyncio.ensure_future(check_smtp_emails_from_db())
         ]
-        results = loop.run_until_complete(asyncio.gather(*tasks))
-        smtp_results, imap_results = results
-        result = {'smtp_results': smtp_results, 'imap_results': imap_results}
+        smtp_results = loop.run_until_complete(asyncio.gather(*tasks))
+        result = {'smtp_results': smtp_results}
         return JsonResponse(result)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -351,4 +300,3 @@ async def check_imap_emails(filename):
             await asyncio.gather(*tasks)
 
     return imap_results
-
