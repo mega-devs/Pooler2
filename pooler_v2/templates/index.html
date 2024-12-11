@@ -114,6 +114,33 @@
                 <span data-i18n-text="lastChecked">Last Checked</span>
               </th>
             </tr>
+            {% for el in smtp_results %}
+                <tr class="text-white">
+                <th scope="col">
+                    {{ el.email }}
+                </th>
+                <th scope="col">
+                    {{ el.password }}
+                </th>
+                <th scope="col">
+                    {{ el.valid }}
+                </th>
+                <th scope="col">
+                    {% if el.status == True %}
+                        Valid
+                    {% endif %}
+                    {% if el.status == False %}
+                        Invalid
+                    {% endif %}
+                    {% if el.status == None %}
+                        Unknown
+                    {% endif %}
+                </th>
+                <th scope="col">
+                    {{ el.check_time }}
+                </th>
+                </tr>
+            {% endfor %}
           </thead>
           <tbody></tbody>
         </table>
