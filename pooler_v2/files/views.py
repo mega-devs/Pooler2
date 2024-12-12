@@ -12,11 +12,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
 from .models import UploadedFile, ExtractedData
-from .forms import UploadedFileForm
+from .forms import UploadedFileForm, ExtractedDataForm
 from .service import determine_origin
 from .tasks import async_handle_archive, async_process_uploaded_files
 from pooler.views import remove_duplicate_lines
 from pooler.utils import extract_country_from_filename
+from random import sample
+from django.http import HttpResponse
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,36 +27,59 @@ logger = logging.getLogger(__name__)
 # --- Панель управления ---
 @login_required(login_url='users:login')
 def panel_table(request):
-    """Отображение данных с пагинацией и фильтрацией."""
+    """Отображение данных с пагинацией или случайным выбором."""
     query_params = request.GET
+    show_all = query_params.get('show_all') == 'true'
+    random_count = int(query_params.get('random_count', 10))
+
+    # Выбор данных
     data = ExtractedData.objects.all()
 
+    # Получение уникальных стран
+    countries = ExtractedData.objects.values_list('country', flat=True).distinct()
+
     # Применение фильтров
-    country_filter = query_params.get('country')
     provider_filter = query_params.get('provider')
     email_filter = query_params.get('email')
+    country_filter = query_params.get('country')
 
-    if country_filter:
-        data = data.filter(country__icontains=country_filter)
     if provider_filter:
         data = data.filter(provider__icontains=provider_filter)
     if email_filter:
         data = data.filter(email__icontains=email_filter)
+    if country_filter:
+        data = data.filter(country__icontains=country_filter)
 
-    # Пагинация
-    paginator = Paginator(data, 10)
-    page = query_params.get('page', 1)
+    if not show_all:
+        # Выводим случайные записи
+        total_count = data.count()
+        random_count = min(random_count, total_count)
+        random_ids = sample(list(data.values_list('id', flat=True)), random_count)
+        data = data.filter(id__in=random_ids)
+        paginator = None
+        current_data_ids = list(data.values_list('id', flat=True))  # IDs случайных записей
+    else:
+        # Включаем пагинацию при "Show All"
+        paginator = Paginator(data, 10)
+        page = query_params.get('page', 1)
+        try:
+            data = paginator.page(page)
+        except PageNotAnInteger:
+            data = paginator.page(1)
+        except EmptyPage:
+            data = paginator.page(paginator.num_pages)
 
-    try:
-        extracted_data = paginator.page(page)
-    except PageNotAnInteger:
-        extracted_data = paginator.page(1)
-    except EmptyPage:
-        extracted_data = paginator.page(paginator.num_pages)
+        current_data_ids = list(data.object_list.values_list('id', flat=True))  # IDs записей текущей страницы
+
+    # Сохраняем IDs текущих записей в сессии
+    request.session['current_data_ids'] = current_data_ids
 
     return render(request, 'tables.html', {
         'active_page': "tables",
-        'data': extracted_data,
+        'data': data,
+        'countries': countries,
+        'show_all': show_all,
+        'random_count': random_count,
         'paginator': paginator,
         'query_params': query_params,
     })
@@ -191,20 +217,32 @@ def uploaded_file_update(request, pk):
 
 @login_required
 def uploaded_file_delete(request, pk):
-    """Удаление загруженного файла вместе с объектом базы данных."""
+    """Удаление загруженного файла вместе с объектом базы данных и распакованными файлами."""
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
     if request.method == 'POST':
         file_path = file_obj.file_path
+        extracted_path = os.path.splitext(file_path)[0]  # Предполагаем, что распакованные файлы находятся в папке с таким же именем
 
         try:
             with transaction.atomic():
                 # Удаляем связанные записи ExtractedData
                 extracted_data_deleted, _ = ExtractedData.objects.filter(uploaded_file=file_obj).delete()
-
                 logger.info(f"Удалено связанных записей: {extracted_data_deleted}")
 
-                # Удаляем файл с диска
+                # Удаляем распакованные файлы и папки
+                if os.path.exists(extracted_path):
+                    for root, dirs, files in os.walk(extracted_path, topdown=False):
+                        for file in files:
+                            os.remove(os.path.join(root, file))
+                        for dir in dirs:
+                            os.rmdir(os.path.join(root, dir))
+                    os.rmdir(extracted_path)  # Удаляем саму папку
+                    logger.info(f"Папка {extracted_path} успешно удалена.")
+                else:
+                    logger.warning(f"Папка {extracted_path} не найдена.")
+
+                # Удаляем оригинальный файл с диска
                 if os.path.exists(file_path):
                     os.remove(file_path)
                     logger.info(f"Файл {file_path} удален с диска.")
@@ -213,8 +251,8 @@ def uploaded_file_delete(request, pk):
 
                 # Удаляем запись UploadedFile
                 file_obj.delete()
-
                 logger.info(f"Объект {file_obj.filename} удален из базы данных.")
+
                 return redirect('files:uploaded_files_list')
 
         except IntegrityError as e:
@@ -225,10 +263,80 @@ def uploaded_file_delete(request, pk):
             })
 
         except Exception as e:
-            logger.error(f"Ошибка удаления файла {file_path}: {e}")
+            logger.error(f"Ошибка удаления файла {file_path} или папки {extracted_path}: {e}")
             return render(request, 'uploaded_file_confirm_delete.html', {
                 'file': file_obj,
-                'error': f"Ошибка удаления файла: {e}"
+                'error': f"Ошибка удаления файла или папки: {e}"
             })
 
     return render(request, 'uploaded_file_confirm_delete.html', {'file': file_obj})
+
+
+################################ Работа с загруженными и распакованными данными
+@login_required
+def download_txt(request):
+    """Скачивание данных, отображаемых на текущей странице, в формате TXT."""
+    current_data_ids = request.session.get('current_data_ids', [])
+
+    # Получение записей, видимых на странице
+    data = ExtractedData.objects.filter(id__in=current_data_ids)
+
+    # Создание TXT файла
+    response = HttpResponse(content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename="extracted_data.txt"'
+
+    for item in data:
+        line = f"Filename: {item.filename} | Email: {item.email} | Password: {item.password} | Provider: {item.provider} | Country: {item.country} | Upload Origin: {item.upload_origin}\n"
+        response.write(line)
+
+    return response
+
+
+
+@login_required
+def extracted_data_update(request, pk):
+    """Редактирование распакованных данных"""
+    data_obj = get_object_or_404(ExtractedData, pk=pk)
+
+    if request.method == 'POST':
+        form = ExtractedDataForm(request.POST, instance=data_obj)
+        if form.is_valid():
+            form.save()
+            return redirect('files:panel_table')
+    else:
+        form = ExtractedDataForm(instance=data_obj)
+
+    return render(request, 'extracted_data_form.html', {'form': form, 'data': data_obj})
+
+
+@login_required
+def extracted_data_delete(request, pk):
+    """Удаление распакованных данных с подтверждением"""
+    data_obj = get_object_or_404(ExtractedData, pk=pk)
+
+    if request.method == 'POST':
+        file_path = os.path.join(settings.BASE_DIR, 'uploads', data_obj.filename)
+
+        try:
+            with transaction.atomic():
+                # Удаляем файл с сервера
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Файл {file_path} успешно удален с сервера.")
+                else:
+                    logger.warning(f"Файл {file_path} не найден на сервере.")
+
+                # Удаляем запись из базы данных
+                data_obj.delete()
+                logger.info(f"Объект {data_obj.email} удален из базы данных.")
+                return redirect('files:panel_table')
+
+        except Exception as e:
+            logger.error(f"Ошибка при удалении {data_obj.email}: {e}")
+            return render(request, 'extracted_data_confirm_delete.html', {
+                'data': data_obj,
+                'error': f"Ошибка удаления объекта: {e}"
+            })
+
+    # Отображаем страницу подтверждения удаления при GET-запросе
+    return render(request, 'extracted_data_confirm_delete.html', {'data': data_obj})

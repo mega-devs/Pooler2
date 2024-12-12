@@ -12,8 +12,9 @@ logger = logging.getLogger(__name__)
 def handle_archive(file_path, save_path):
     try:
         with zipfile.ZipFile(file_path, 'r') as archive:
-            archive.extractall(save_path)
-        os.remove(file_path)
+            extracted_folder = os.path.splitext(file_path)[0]  # Папка для распакованных файлов
+            archive.extractall(extracted_folder)
+        os.remove(file_path)  # Удаляем оригинальный архив после распаковки
     except zipfile.BadZipFile:
         raise ValueError("Invalid archive format")
 

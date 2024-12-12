@@ -3,17 +3,17 @@ from django import forms
 from .models import User
 
 
-class UserRegisterForm(UserCreationForm):
-    avatar = forms.ImageField(required=False)
-    country = forms.CharField(
-        max_length=50,
-        required=True,
-        widget=forms.TextInput(attrs={"placeholder": "Enter your country"}),
-    )
 
+
+class UserRegisterForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ['email', 'country', 'password1', 'password2']
+        fields = ['username', 'password1', 'password2']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your username'}),
+            'password1': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter your password'}),
+            'password2': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm your password'}),
+        }
 
 
 
