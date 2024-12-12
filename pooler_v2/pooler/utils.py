@@ -1,4 +1,6 @@
+import asyncio
 import hashlib
+import imaplib
 import io
 import json
 import os
@@ -18,6 +20,7 @@ import smtplib
 
 import dns.resolver
 
+from files.service import logger
 from root import settings
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'root.settings')
@@ -28,6 +31,7 @@ def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
+
 #
 # class SmtpDriver:
 #     """
@@ -37,72 +41,72 @@ def chunks(lst, n):
 #         check_connection(email, password): Checks the SMTP connection for a given email and password.
 #     """
 
-    # async def check_connection(self, email, password):
-    #     """
-    #     Check the SMTP connection for a given email and password.
-    #
-    #     Args:
-    #         email (str): Email address to check.
-    #         password (str): Password for the email address.
-    #
-    #     Returns:
-    #         dict: Connection status and port information.
-    #     """
-    #     try:
-    #         # Load SMTP service and port configurations
-    #         async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpservices.json'), 'r') as f:
-    #             content = await f.read()
-    #             smtp_services = json.loads(content)
-    #
-    #         async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpports.json'), 'r') as f:
-    #             content = await f.read()
-    #             smtp_ports = json.loads(content)['smtpports']
-    #
-    #         email_domain = email.split('@')[1]
-    #         host = smtp_services["smtpservices"].get(email_domain, None)
-    #
-    #         if not host:
-    #             raise ValueError(f"No SMTP service found for domain: {email_domain}")
-    #
-    #         for port in smtp_ports:
-    #             smtp_server = aiosmtplib.SMTP(hostname=host.split(':')[0], port=port, start_tls=True, timeout=10)
-    #             try:
-    #                 print(f"[SMTP] Trying {host}:{port}")
-    #                 await smtp_server.connect()
-    #                 await smtp_server.login(email, password)
-    #                 await smtp_server.quit()
-    #
-    #                 # Save result to the database
-    #                 EmailCheck.objects.create(
-    #                     email=email,
-    #                     status='valid',
-    #                     check_type='SMTP',
-    #                 )
-    #                 return {'status': 'valid', 'port': port}
-    #             except aiosmtplib.SMTPAuthenticationError:
-    #                 await smtp_server.quit()
-    #             except Exception as e:
-    #                 print(f"[SMTP] {str(e)}")
-    #                 pass
-    #
-    #         # If all ports fail
-    #         EmailCheck.objects.create(
-    #             email=email,
-    #             status='invalid',
-    #             check_type='SMTP',
-    #         )
-    #         return {'status': 'invalid'}
-    #     except Exception as e:
-    #         # Save error to the database
-    #         try:
-    #             EmailCheck.objects.create(
-    #                 email=email,
-    #                 status='error',
-    #                 check_type='SMTP',
-    #             )
-    #         except IntegrityError:
-    #             pass  # Ignore if email already exists in the database
-    #         return {'status': 'error', 'error': str(e)}
+# async def check_connection(self, email, password):
+#     """
+#     Check the SMTP connection for a given email and password.
+#
+#     Args:
+#         email (str): Email address to check.
+#         password (str): Password for the email address.
+#
+#     Returns:
+#         dict: Connection status and port information.
+#     """
+#     try:
+#         # Load SMTP service and port configurations
+#         async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpservices.json'), 'r') as f:
+#             content = await f.read()
+#             smtp_services = json.loads(content)
+#
+#         async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpports.json'), 'r') as f:
+#             content = await f.read()
+#             smtp_ports = json.loads(content)['smtpports']
+#
+#         email_domain = email.split('@')[1]
+#         host = smtp_services["smtpservices"].get(email_domain, None)
+#
+#         if not host:
+#             raise ValueError(f"No SMTP service found for domain: {email_domain}")
+#
+#         for port in smtp_ports:
+#             smtp_server = aiosmtplib.SMTP(hostname=host.split(':')[0], port=port, start_tls=True, timeout=10)
+#             try:
+#                 print(f"[SMTP] Trying {host}:{port}")
+#                 await smtp_server.connect()
+#                 await smtp_server.login(email, password)
+#                 await smtp_server.quit()
+#
+#                 # Save result to the database
+#                 EmailCheck.objects.create(
+#                     email=email,
+#                     status='valid',
+#                     check_type='SMTP',
+#                 )
+#                 return {'status': 'valid', 'port': port}
+#             except aiosmtplib.SMTPAuthenticationError:
+#                 await smtp_server.quit()
+#             except Exception as e:
+#                 print(f"[SMTP] {str(e)}")
+#                 pass
+#
+#         # If all ports fail
+#         EmailCheck.objects.create(
+#             email=email,
+#             status='invalid',
+#             check_type='SMTP',
+#         )
+#         return {'status': 'invalid'}
+#     except Exception as e:
+#         # Save error to the database
+#         try:
+#             EmailCheck.objects.create(
+#                 email=email,
+#                 status='error',
+#                 check_type='SMTP',
+#             )
+#         except IntegrityError:
+#             pass  # Ignore if email already exists in the database
+#         return {'status': 'error', 'error': str(e)}
 
 
 # class ImapDriver:
@@ -235,11 +239,20 @@ def get_email_bd_data():
     return emails_data
 
 
-# Function to validate an SMTP server
+# Function to validate an IMAP server
+def imapCheck(email, password, imapServerName, port):
+    try:
+        M = imaplib.IMAP4_SSL(imapServerName)
+        M.login(email, password)
+        return True
+    except Exception as e:
+        logger.debug('e')
+        return False
 
 
 async def process_chunk_from_file(chunk, results):
-    """Программа проверяет почтовый адрес на валидность по написанию, по наличию МХ записей на сервере и по
+    """Программа проверяет почтовый адрес на валидность и SMTP и IMAP сразу по написанию, по наличию МХ записей на
+    сервере и по
     привествию с сервера, данные о почтовых адресах загружены из зип архива."""
     for cred in chunk:
         if "@" not in cred:
@@ -247,9 +260,9 @@ async def process_chunk_from_file(chunk, results):
         if cred.count(":") != 1:
             continue
 
-        smtp_server, data = cred.strip().split(":")
-        smtp_port, email, password = data.split(",")
-        status = 'invalid'
+        server, data = cred.strip().split(":")
+        port, email, password = data.split(",")
+        smtp_status = 'invalid'
 
         try:
             match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
@@ -264,15 +277,22 @@ async def process_chunk_from_file(chunk, results):
 
                         try:
                             server.connect(mx_record)
-                            code, message = server.helo(smtp_server)
-                            server = smtplib.SMTP(smtp_server, smtp_port)
-                            if code == 250:
-                                status = 'valid'
+                            code, message = server.helo(server)
+                            if server[0:4] == 'smtp':
+                                server = smtplib.SMTP(server, port)
+                                if code == 250:
+                                    smtp_status = 'valid'
+                            elif server[0:4] == 'imap':
+                                check_result = imapCheck(email, password, server, port)
+                                if check_result:
+                                    imap_status = 'valid'
+                                else:
+                                    imap_status = 'invalid'
                         except Exception as ex:
                             print(ex)
                 except Exception as ex:
                     print(ex)
-                result = {'email': email, 'password': password, 'status': status}
+                result = {'email': email, 'password': password, 'status': smtp_status, 'imap_status': imap_status}
                 results.append(result)
             # status = await driver.check_connection(email, password)
             # if status == 'valid':
@@ -280,20 +300,22 @@ async def process_chunk_from_file(chunk, results):
 
             logger.info({'email': email,
                          'password': password,
-                         'valid': status,
+                         'smtp_valid': smtp_status,
+                         'imap_valid': imap_status,
                          'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
 
         except Exception as e:
             logger.error(f"Error checking connection for email {email}: {e}")
 
 
-async def process_chunk_from_db(chunk, results):
-    """Так же проверяет почтовые адреса на валидность, но данные загружены из бд."""
+async def process_chunk_from_db(chunk, smtp_results):
+    """Так же проверяет почтовые адреса на валидность SMTP, но данные загружены из бд."""
     status = 'invalid'
 
     email = chunk['email']
     name, server = email.split('@')
     smtp_server = 'smtp.' + server
+    imap_server = 'imap.' + server
 
     password = chunk['password']
 
@@ -319,8 +341,8 @@ async def process_chunk_from_db(chunk, results):
             except Exception as ex:
                 print(ex)
 
-        result = {'email': email, 'password': password, 'status': status}
-        results.append(result)
+        smtp_result = {'email': email, 'password': password, 'status': status}
+        smtp_results.append(smtp_result)
         # status = await driver.check_connection(email, password)
         # if status == 'valid':
         #     results.append(status)
@@ -334,11 +356,54 @@ async def process_chunk_from_db(chunk, results):
         logger.error(f"Error checking connection for email {email}: {e}")
 
 
-async def check_smtp_emails_from_zip(filename):
-    '''Основная функция проверки почтовых адресов по smtp, в ней реализована работа с архивом и далее данные
-    передаются на функцию process_chunk_from_file'''
+async def imap_process_chunk_from_db(chunk, imap_results):
+    """Так же проверяет почтовые адреса на валидность IMAP, но данные загружены из бд."""
+    email = chunk['email']
+    name, server = email.split('@')
+    imap_server = 'imap.' + server
+
+    password = chunk['password']
+
+    try:
+        match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
+        if match:
+            try:
+                records = dns.resolver.resolve("mail.ru", 'MX')
+                mx_record = records[0].exchange
+                mx_record = str(mx_record)
+                if mx_record is not None:
+                    try:
+                        imap_check_result = imapCheck(email, password, imap_server, 993)
+                        if imap_check_result:
+                            imap_status = 'valid'
+                        else:
+                            imap_status = 'invalid'
+                    except Exception as ex:
+                        print(ex)
+            except Exception as ex:
+                print(ex)
+
+        imap_result = {'email': email, 'password': password, 'status': imap_status}
+        imap_results.append(imap_result)
+        # status = await driver.check_connection(email, password)
+        # if status == 'valid':
+        #     results.append(status)
+
+        logger.info({'email': email,
+                     'password': password,
+                     'valid': imap_status,
+                     'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+
+    except Exception as e:
+        logger.error(f"Error checking connection for email {email}: {e}")
+
+
+async def check_smtp_imap_emails_from_zip(filename):
+    '''Основная функция проверки почтовых адресов по smtp и imap, в ней реализована работа с архивом и далее данные
+    передаются на функцию process_chunk_from_file результатом является добавление значений в записи в базе данных по
+    соответствующим почтовым адресам.'''
     # smtp_driver = SmtpDriver()
-    smtp_results = []
+    results =[]
 
     file_path = os.path.join(settings.MEDIA_ROOT, "combofiles", filename)
 
@@ -350,7 +415,7 @@ async def check_smtp_emails_from_zip(filename):
                         lines = f.readlines()
                         chunk_size = 100
                         chunked_lines = list(chunks(lines, chunk_size))
-                        tasks = [process_chunk_from_file(chunk, smtp_results) for chunk in
+                        tasks = [process_chunk_from_file(chunk, results) for chunk in
                                  chunked_lines]
                         await gather(*tasks)
     else:
@@ -358,14 +423,16 @@ async def check_smtp_emails_from_zip(filename):
             lines = await f.readlines()
             chunk_size = 100
             chunked_lines = list(chunks(lines, chunk_size))
-            tasks = [process_chunk_from_file(chunk, smtp_results) for chunk in chunked_lines]
+            tasks = [process_chunk_from_file(chunk, results) for chunk in chunked_lines]
             await gather(*tasks)
 
-    for el in smtp_results:
-        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
+    for el in results:
+        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'], imap_is_valid=el[
+            'imap_status'])
 
 
 async def check_smtp_emails_from_db(filename):
+    '''Основная функция проверки почтовых адресов SMTP, запускает подфункцию process_chunk_from_db'''
     # smtp_driver = SmtpDriver()
     smtp_results = []
 
@@ -377,3 +444,18 @@ async def check_smtp_emails_from_db(filename):
 
     for el in smtp_results:
         ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
+
+
+async def check_imap_emails_from_db(filename):
+    '''Основная функция, запускает подфункцию imap_process_chank from_db'''
+    # smtp_driver = SmtpDriver()
+    imap_results = []
+
+    data = get_email_bd_data()
+
+    tasks = [process_chunk_from_db(el, imap_results) for el in
+             data]
+    await gather(*tasks)
+
+    for el in imap_results:
+        ExtractedData.objects.filter(email=el['email']).update(imap_is_valid=el['status'])
