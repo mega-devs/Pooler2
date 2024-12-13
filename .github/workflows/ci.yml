@@ -23,11 +23,11 @@ jobs:
 
       - name: Copy project files to server
         run: |
-          rsync -avz --exclude '.git' --exclude '.github' -e "ssh -o StrictHostKeyChecking=no" ./ root@93.123.72.45:/root/mmb/
+          rsync -avz --exclude '.git' --exclude '.github' -e "ssh -o StrictHostKeyChecking=no" ./ root@89.249.49.109:/root/pooler/pool2/pooler_v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
       - name: Build and start Docker containers on server
         run: |
-          ssh -o StrictHostKeyChecking=no root@93.123.72.45 'cd /root/mmb/ && docker-compose pull && docker-compose up -d'
+          ssh -o StrictHostKeyChecking=no root@89.249.49.109 'cd /root/pooler/pool2/pooler_v2 && docker-compose pull && docker-compose up -d'
