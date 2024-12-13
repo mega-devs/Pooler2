@@ -114,7 +114,7 @@
                 <span data-i18n-text="lastChecked">Last Checked</span>
               </th>
             </tr>
-            {% for el in smtp_results %}
+            {% for el in queryset %}
                 <tr class="text-white">
                 <th scope="col">
                     {{ el.email }}
@@ -123,7 +123,7 @@
                     {{ el.password }}
                 </th>
                 <th scope="col">
-                    {{ el.valid }}
+                    {{ el.smtp_is_valid }}
                 </th>
                 <th scope="col">
                     {% if el.status == True %}
@@ -137,7 +137,7 @@
                     {% endif %}
                 </th>
                 <th scope="col">
-                    {{ el.check_time }}
+                    time
                 </th>
                 </tr>
             {% endfor %}
@@ -183,7 +183,7 @@
                 <span data-i18n-text="lastChecked">Last Checked</span>
               </th>
             </tr>
-                {% for el in imap_results %}
+                {% for el in queryset %}
                 <tr class="text-white">
                 <th scope="col">
                     {{ el.email }}
@@ -192,7 +192,7 @@
                     {{ el.password }}
                 </th>
                 <th scope="col">
-                    {{ el.valid }}
+                    {{ el.imap_is_valid }}
                 </th>
                 <th scope="col">
                     {% if el.status == True %}
@@ -206,7 +206,7 @@
                     {% endif %}
                 </th>
                 <th scope="col">
-                    {{ el.check_time }}
+                    time
                 </th>
                 </tr>
                 {% endfor %}

@@ -13,6 +13,8 @@ from django.db import IntegrityError
 import aiofiles
 import aioimaplib
 import aiosmtplib
+from validate_email_address import validate_email
+
 from files.models import ExtractedData
 from asyncio import gather
 import re
@@ -315,7 +317,6 @@ async def process_chunk_from_db(chunk, smtp_results):
     email = chunk['email']
     name, server = email.split('@')
     smtp_server = 'smtp.' + server
-    imap_server = 'imap.' + server
 
     password = chunk['password']
 
@@ -335,7 +336,9 @@ async def process_chunk_from_db(chunk, smtp_results):
                         code, message = server.helo(smtp_server)
                         server = smtplib.SMTP(smtp_server, 587)
                         if code == 250:
-                            status = True
+                            result_2 = validate_email(email, check_mx=False)
+                            if result_2:
+                                status = True
                     except Exception as ex:
                         print(ex)
             except Exception as ex:
