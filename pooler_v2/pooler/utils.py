@@ -462,3 +462,6 @@ async def check_imap_emails_from_db(filename):
 
     for el in imap_results:
         ExtractedData.objects.filter(email=el['email']).update(imap_is_valid=el['status'])
+
+
+# For fetch
