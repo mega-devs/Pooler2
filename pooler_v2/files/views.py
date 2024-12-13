@@ -15,8 +15,7 @@ from .models import UploadedFile, ExtractedData
 from .forms import UploadedFileForm, ExtractedDataForm
 from .service import determine_origin
 from .tasks import async_handle_archive, async_process_uploaded_files
-from pooler.views import remove_duplicate_lines
-from pooler.utils import extract_country_from_filename
+from .service import remove_duplicate_lines, extract_country_from_filename
 from random import sample
 from django.http import HttpResponse
 

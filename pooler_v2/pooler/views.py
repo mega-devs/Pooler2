@@ -17,8 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.contrib.auth.decorators import login_required
 from .pooler_logging import logger_temp_smtp
-from .utils import extract_country_from_filename, chunks, get_email_bd_data, check_smtp_emails_from_db, \
-    check_smtp_emails_from_zip
+from .utils import extract_country_from_filename, chunks, get_email_bd_data, check_smtp_emails_from_db, check_smtp_imap_emails_from_zip
 from files.models import ExtractedData
 import mimetypes
 from django.urls import reverse_lazy

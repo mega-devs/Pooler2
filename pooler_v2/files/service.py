@@ -3,10 +3,51 @@ import zipfile
 import re
 import logging
 from .models import ExtractedData
-from pooler.views import remove_duplicate_lines
-from pooler.utils import extract_country_from_filename
+
+import chardet
+import mimetypes
+
 
 logger = logging.getLogger(__name__)
+
+def extract_country_from_filename(filename):
+    match = re.search(r'(?<=_)([A-Z]{2})(?=[_\W])', filename)
+    if match:
+        return match.group(1)
+    return None
+
+
+def remove_duplicate_lines(file_path):
+    try:
+        # Определяем тип файла
+        mime_type = mimetypes.guess_type(file_path)[0]
+        if not mime_type or not mime_type.startswith("text"):
+            raise ValueError("Invalid file type. Only text files are supported for removing duplicates.")
+
+        # Определяем кодировку файла
+        with open(file_path, 'rb') as f:
+            raw_data = f.read()
+            detection = chardet.detect(raw_data)
+            encoding = detection.get('encoding', 'utf-8')  # По умолчанию 'utf-8'
+
+            if encoding is None:
+                raise ValueError("Unable to detect file encoding")
+
+            # Читаем строки файла в указанной кодировке
+            lines = raw_data.decode(encoding).splitlines()
+
+        # Убираем дубликаты строк
+        unique_lines = list(set(lines))
+
+        # Перезаписываем файл уникальными строками в той же кодировке
+        with open(file_path, 'w', encoding=encoding) as f:
+            f.write('\n'.join(unique_lines))
+
+        # Возвращаем количество удалённых строк
+        return len(lines) - len(unique_lines)
+    except Exception as e:
+        logging.error(f"Error removing duplicate lines: {e}")
+        raise
 
 
 def handle_archive(file_path, save_path):
