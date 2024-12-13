@@ -17,7 +17,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.contrib.auth.decorators import login_required
 from .pooler_logging import logger_temp_smtp
-from .utils import extract_country_from_filename, SmtpDriver, chunks, ImapDriver, get_email_bd_data, check_smtp_emails_from_db
+from .utils import extract_country_from_filename, chunks, get_email_bd_data, check_smtp_emails_from_db, \
+    check_smtp_emails_from_zip
 from files.models import ExtractedData
 import mimetypes
 from django.urls import reverse_lazy
@@ -275,28 +276,28 @@ def check_smtp_emails_route(request):
 
 
 
-async def check_imap_emails(filename):
-    imap_driver = ImapDriver()
-    imap_results = []
-
-    file_path = os.path.join(settings.BASE_DIR, 'app', 'data', 'combofiles', filename)
-
-    if filename.endswith('.zip'):
-        with zipfile.ZipFile(file_path, 'r') as zip_file:
-            for zip_info in zip_file.infolist():
-                if not zip_info.is_dir():
-                    with io.TextIOWrapper(zip_file.open(zip_info), encoding='utf-8') as f:
-                        lines = f.readlines()
-                        chunks_size = 100
-                        chunked_lines = list(chunks(lines, chunks_size))
-                        tasks = [process_chunk(chunk, imap_driver, imap_results) for chunk in chunked_lines]
-                        await asyncio.gather(*tasks)
-    else:
-        async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
-            lines = await f.readlines()
-            chunks_size = 100
-            chunked_lines = list(chunks(lines, chunks_size))
-            tasks = [process_chunk(chunk, imap_driver, imap_results) for chunk in chunked_lines]
-            await asyncio.gather(*tasks)
-
-    return imap_results
+# async def check_imap_emails(filename):
+#     imap_driver = ImapDriver()
+#     imap_results = []
+#
+#     file_path = os.path.join(settings.BASE_DIR, 'app', 'data', 'combofiles', filename)
+#
+#     if filename.endswith('.zip'):
+#         with zipfile.ZipFile(file_path, 'r') as zip_file:
+#             for zip_info in zip_file.infolist():
+#                 if not zip_info.is_dir():
+#                     with io.TextIOWrapper(zip_file.open(zip_info), encoding='utf-8') as f:
+#                         lines = f.readlines()
+#                         chunks_size = 100
+#                         chunked_lines = list(chunks(lines, chunks_size))
+#                         tasks = [process_chunk(chunk, imap_driver, imap_results) for chunk in chunked_lines]
+#                         await asyncio.gather(*tasks)
+#     else:
+#         async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
+#             lines = await f.readlines()
+#             chunks_size = 100
+#             chunked_lines = list(chunks(lines, chunks_size))
+#             tasks = [process_chunk(chunk, imap_driver, imap_results) for chunk in chunked_lines]
+#             await asyncio.gather(*tasks)
+#
+#     return imap_results
