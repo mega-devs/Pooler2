@@ -1,4 +1,4 @@
-# files/tasks.py
+
 
 from celery import shared_task
 from redis.exceptions import ConnectionError, ResponseError
