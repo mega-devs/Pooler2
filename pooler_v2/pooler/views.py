@@ -52,7 +52,8 @@ def redirect_to_panel(request):
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel(request):
-    return render(request, 'index.html', {'active_page': "dashboard"})
+    queryset = ExtractedData.objects.all()
+    return render(request, 'index.html', {'active_page': "dashboard", 'queryset': queryset})
 
 
 @login_required(login_url='users:login')
