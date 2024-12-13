@@ -141,4 +141,6 @@ CELERY_RESULT_BACKEND = "redis://redis:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
-
+CELERY_ENABLE_UTC = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Чтобы избежать перегрузки очередей
+CELERY_TASK_ACKS_LATE = True  # Повторная отправка задачи при сбое

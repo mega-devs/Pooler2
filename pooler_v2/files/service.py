@@ -42,7 +42,6 @@ def process_uploaded_files(base_upload_dir, uploaded_file):
 
 
 def process_file(file_path, file_name, uploaded_file):
-    """Извлекает данные из распакованного файла."""
     try:
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
@@ -52,7 +51,7 @@ def process_file(file_path, file_name, uploaded_file):
 
         upload_origin = determine_origin(file_name)
 
-        for line in lines:
+        for line_number, line in enumerate(lines, start=1):
             match = re.match(r"([^@]+@[^:]+):(.+)", line.strip())
             if match:
                 email, password = match.groups()
@@ -65,6 +64,7 @@ def process_file(file_path, file_name, uploaded_file):
                     provider=provider,
                     country=country,
                     filename=file_name,
+                    line_number=line_number,  # Сохранение номера строки
                     uploaded_file=uploaded_file,
                     upload_origin=upload_origin
                 )

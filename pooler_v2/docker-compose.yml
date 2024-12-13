@@ -8,6 +8,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: always
 
   web:
     build:
@@ -20,20 +21,24 @@ services:
       - .env
     depends_on:
       - db
+      - redis
     volumes:
       - ./uploads:/app/uploads
+    restart: always
 
   redis:
     image: redis:alpine
     container_name: pooler_redis
     ports:
       - "6379:6379"
+    command: redis-server --save "" --appendonly no
+    restart: always
 
   celery:
     build:
       context: .
     container_name: pooler_celery
-    command: celery -A root worker --loglevel=info
+    command: celery -A root worker --loglevel=info --concurrency=4
     volumes:
       - .:/app
     env_file:
@@ -41,6 +46,7 @@ services:
     depends_on:
       - db
       - redis
+    restart: always
 
 volumes:
   postgres_data:

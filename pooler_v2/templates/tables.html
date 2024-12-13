@@ -59,6 +59,7 @@
                     <tr>
                         <th>#</th>
                         <th>Filename</th>
+                        <th>Line Number</th>
                         <th>Email</th>
                         <th>Password</th>
                         <th>Provider</th>
@@ -72,6 +73,7 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ item.filename }}</td>
+                        <td>{{ item.line_number }}</td>  <!-- Добавлен номер строки -->
                         <td>{{ item.email }}</td>
                         <td>{{ item.password }}</td>
                         <td>{{ item.provider }}</td>
@@ -84,7 +86,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8">No data found.</td>
+                        <td colspan="9" class="text-center">No data found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

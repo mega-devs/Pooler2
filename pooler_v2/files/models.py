@@ -45,6 +45,7 @@ class ExtractedData(models.Model):
     provider = models.CharField(max_length=100)
     country = models.CharField(max_length=100, null=True, blank=True)
     filename = models.CharField(max_length=255, null=True, blank=True)
+    line_number = models.PositiveIntegerField(null=True, blank=True)  # Новое поле
     uploaded_file = models.ForeignKey(
         'UploadedFile', on_delete=models.CASCADE, related_name='extracted_data'
     )

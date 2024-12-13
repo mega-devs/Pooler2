@@ -285,8 +285,17 @@ def download_txt(request):
     response = HttpResponse(content_type='text/plain')
     response['Content-Disposition'] = 'attachment; filename="extracted_data.txt"'
 
+    # Генерация содержимого файла
     for item in data:
-        line = f"Filename: {item.filename} | Email: {item.email} | Password: {item.password} | Provider: {item.provider} | Country: {item.country} | Upload Origin: {item.upload_origin}\n"
+        line = (
+            f"Line: {item.line_number} | "
+            f"Filename: {item.filename} | "
+            f"Email: {item.email} | "
+            f"Password: {item.password} | "
+            f"Provider: {item.provider} | "
+            f"Country: {item.country} | "
+            f"Upload Origin: {item.upload_origin}\n"
+        )
         response.write(line)
 
     return response
