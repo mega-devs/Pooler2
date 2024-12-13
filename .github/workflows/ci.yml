@@ -30,4 +30,4 @@ jobs:
 
       - name: Build and start Docker containers on server
         run: |
-          ssh -o StrictHostKeyChecking=no root@93.123.72.45 'cd /root/mmb/ && docker-compose pull && docker-compose up -d'
+          ssh -o StrictHostKeyChecking=no root@89.249.49.109 'cd /root/pooler/pool2/pooler_v2 && docker-compose pull && docker-compose up -d'
