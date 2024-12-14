@@ -18,15 +18,14 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from django.contrib.auth.decorators import login_required
 from .pooler_logging import logger_temp_smtp
 from .utils import extract_country_from_filename, chunks, get_email_bd_data, check_smtp_emails_from_db, \
-    check_smtp_emails_from_zip
+    check_smtp_imap_emails_from_zip, check_imap_emails_from_db
 from files.models import ExtractedData
 import mimetypes
 from django.urls import reverse_lazy
+
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
-
 logger = logging.getLogger(__name__)
-
 
 
 # @require_http_methods(['GET', 'POST'])
@@ -52,7 +51,18 @@ def redirect_to_panel(request):
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel(request):
-    return render(request, 'index.html', {'active_page': "dashboard"})
+    queryset = ExtractedData.objects.all()
+    smtp_valid_count = ExtractedData.objects.filter(smtp_is_valid=True).count()
+    imap_valid_count = ExtractedData.objects.filter(imap_is_valid=True).count()
+    smtp_invalid_count = ExtractedData.objects.filter(smtp_is_valid=False).count()
+    imap_invalid_count = ExtractedData.objects.filter(imap_is_valid=False).count()
+    smtp_checked = smtp_invalid_count + smtp_valid_count
+    imap_checked = imap_invalid_count + imap_valid_count
+    smtp_all_count = ExtractedData.objects.all().count()
+    return render(request, 'index.html', {'active_page': "dashboard", 'queryset': queryset, 'count_of_smtp_valid':
+        smtp_valid_count, 'count_of_smtp_invalid':smtp_invalid_count, 'count_of_smtp':smtp_all_count,
+                                          'count_imap_valid': imap_valid_count, 'count_imap_invalid':
+                                              imap_invalid_count, 'smtp_checked':smtp_checked, 'imap_checked':imap_checked})
 
 
 @login_required(login_url='users:login')
@@ -65,7 +75,6 @@ def panel_table_placeholder(request):
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
     return render(request, 'settings.html', {'active_page': "settings"})
-
 
 
 @csrf_exempt
@@ -104,17 +113,22 @@ def upload_file_by_url(request):
         return JsonResponse({'status': 405, 'error': 'Method not allowed'}, status=405)
 
 
+@require_GET
+async def check_smtp_view(request):
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.create_task(check_smtp_emails_from_db())
+        return redirect('/')
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @require_GET
-async def check_emails_view(request, filename):
+async def check_imap_view(request):
     try:
-        smtp_results, imap_results = await asyncio.gather(
-            check_smtp_emails_from_zip(filename),
-            check_imap_emails(filename)
-        )
-        result = {'smtp_results': smtp_results, 'imap_results': imap_results}
-        return JsonResponse(result)
+        loop = asyncio.get_event_loop()
+        await loop.create_task(check_imap_emails_from_db())
+        return redirect('/')
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -201,7 +215,6 @@ def clear_full_logs(request):
         return JsonResponse({"message": str(e)}, status=500)
 
 
-
 def remove_duplicate_lines(file_path):
     try:
         # Определяем тип файла
@@ -233,7 +246,6 @@ def remove_duplicate_lines(file_path):
     except Exception as e:
         logging.error(f"Error removing duplicate lines: {e}")
         raise
-
 
 
 @require_GET
@@ -272,9 +284,6 @@ def check_smtp_emails_route(request):
         return JsonResponse({'error': str(e)}, status=500)
     finally:
         loop.close()
-
-
-
 
 # async def check_imap_emails(filename):
 #     imap_driver = ImapDriver()

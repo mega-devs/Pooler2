@@ -3,227 +3,263 @@
 {% block title %}Pooler - Main Page{% endblock %}
 
 {% block dashboard %}
-<div id="dashboard" class="container-fluid pt-4 px-4">
-    <div class="bg-secondary text-center rounded p-4">
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <h4 class="mb-0" data-i18n-text="addFile">ADD FILE</h4>
-            <form
-                action="{% url 'files:upload_combofile' %}"
-                method="POST"
-                enctype="multipart/form-data"
-                id="upload-form"
-                style="display: flex; flex-direction: column; align-items: flex-start;"
-            >
-                {% csrf_token %}
-                <label for="file-input" class="btn btn-sm btn-danger">
+    <div id="dashboard" class="container-fluid pt-4 px-4">
+        <div class="bg-secondary text-center rounded p-4">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h4 class="mb-0" data-i18n-text="addFile">ADD FILE</h4>
+                <form
+                        action="{% url 'files:upload_combofile' %}"
+                        method="POST"
+                        enctype="multipart/form-data"
+                        id="upload-form"
+                        style="display: flex; flex-direction: column; align-items: flex-start;"
+                >
+                    {% csrf_token %}
+                    <label for="file-input" class="btn btn-sm btn-danger">
+                        <input
+                                type="file"
+                                id="file-input"
+                                name="file"
+                                class="d-none"
+                                onchange="document.getElementById('upload-form').submit()"
+                        />
+                        Choose file
+                    </label>
+                </form>
+            </div>
+            <br/>
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h4 class="mb-0 mr-3" style="white-space: nowrap">
+                    ADD FILE BY URL
+                </h4>
+                <div class="input-group w-50" style="margin-right: 1em">
                     <input
-                        type="file"
-                        id="file-input"
-                        name="file"
-                        class="d-none"
-                        onchange="document.getElementById('upload-form').submit()"
+                            type="text"
+                            id="url-input"
+                            class="form-control"
+                            placeholder="Enter URL"
+                            data-i18n-text="enterUrl"
+                            style="margin-right: 1em"
                     />
-                    Choose file
-                </label>
-            </form>
-        </div>
-        <br />
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <h4 class="mb-0 mr-3" style="white-space: nowrap">
-                ADD FILE BY URL
-            </h4>
-            <div class="input-group w-50" style="margin-right: 1em">
-                <input
-                    type="text"
-                    id="url-input"
-                    class="form-control"
-                    placeholder="Enter URL"
-                    data-i18n-text="enterUrl"
-                    style="margin-right: 1em"
-                />
-                <div class="input-group-append">
-                    <button
-                        class="btn btn-primary"
-                        type="button"
-                        id="fetch-url-button"
-                    >
-                        Add
-                    </button>
+                    <div class="input-group-append">
+                        <button
+                                class="btn btn-primary"
+                                type="button"
+                                id="fetch-url-button"
+                        >
+                            Add
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <h4 class="mb-0 mr-3" style="white-space: nowrap">
-                ADD TELEGRAM
-            </h4>
-            <div class="input-group w-50" style="margin-right: 1em">
-                <input
-                    type="text"
-                    id="tg-url-input"
-                    class="form-control"
-                    placeholder="Enter Telegram URL or Username"
-                    data-i18n-text="enterTgUrl"
-                    style="margin-right: 1em"
-                />
-                <div class="input-group-append">
-                    <button
-                        class="btn btn-primary"
-                        type="button"
-                        id="fetch-tg-button"
-                    >
-                        Add
-                    </button>
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h4 class="mb-0 mr-3" style="white-space: nowrap">
+                    ADD TELEGRAM
+                </h4>
+                <div class="input-group w-50" style="margin-right: 1em">
+                    <input
+                            type="text"
+                            id="tg-url-input"
+                            class="form-control"
+                            placeholder="Enter Telegram URL or Username"
+                            data-i18n-text="enterTgUrl"
+                            style="margin-right: 1em"
+                    />
+                    <div class="input-group-append">
+                        <button
+                                class="btn btn-primary"
+                                type="button"
+                                id="fetch-tg-button"
+                        >
+                            Add
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-        <hr />
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <h4 class="mb-0" data-i18n-text="fileList">FILE LIST</h4>
-            <div id="file-list"></div>
+            <hr/>
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h4 class="mb-0" data-i18n-text="fileList">FILE LIST</h4>
+                <div id="file-list"></div>
+            </div>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block info %}
-<div class="col-sm-12 col-md-6 col-xl-6">
-    <div class="h-100 bg-secondary rounded p-4">
-      <div
-        class="d-flex align-items-center justify-content-between mb-2"
-      >
-        <h4 class="mb-0" data-i18n-text="smtpInfo">SMTP INFO</h4>
-      </div>
-      <hr />
-      <div class="table-responsive">
-        <table
-          class="table text-start align-middle table-bordered table-hover mb-0"
-          id="smtp_info_table"
-        >
-          <thead>
-            <tr class="text-white">
-              <th scope="col">
-                <span data-i18n-text="email">Email</span>
-              </th>
-              <th scope="col">
-                <span data-i18n-text="password">Password</span>
-              </th>
-              <th scope="col">
-                <span data-i18n-text="valid">Status</span>
-              </th>
-              <th scope="col">
-                <span data-i18n-text="lastChecked">Last Checked</span>
-              </th>
-            </tr>
-            {% for el in smtp_results %}
-                <tr class="text-white">
-                <th scope="col">
-                    {{ el.email }}
-                </th>
-                <th scope="col">
-                    {{ el.password }}
-                </th>
-                <th scope="col">
-                    {{ el.valid }}
-                </th>
-                <th scope="col">
-                    {% if el.status == True %}
-                        Valid
-                    {% endif %}
-                    {% if el.status == False %}
-                        Invalid
-                    {% endif %}
-                    {% if el.status == None %}
-                        Unknown
-                    {% endif %}
-                </th>
-                <th scope="col">
-                    {{ el.check_time }}
-                </th>
-                </tr>
-            {% endfor %}
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <hr />
-      <h4 data-i18n-text="smtpStat">SMTP STATISTICS</h4>
-      <h6>Checked: <span id="smtp_checked">0</span></h6>
-      <h6 style="color: lawngreen">
-        Valid: <span id="smtp_valid">0</span>
-      </h6>
-      <h6 style="color: red">Dead: <span id="smtp_dead">0</span></h6>
+    <div class="col-sm-12 col-md-6 col-xl-6">
+        <div class="h-100 bg-secondary rounded p-4">
+            <div
+                    class="d-flex align-items-center justify-content-between mb-2"
+            >
+                <h4 class="mb-0" data-i18n-text="smtpInfo">SMTP INFO</h4>
+            </div>
+            <hr/>
+            <div class="table-responsive">
+                <table
+                        class="table text-start align-middle table-bordered table-hover mb-0"
+                        id="smtp_info_table"
+                >
+                    <thead>
+                    <tr class="text-white">
+                        <th scope="col">
+                            <span data-i18n-text="email">Email</span>
+                        </th>
+                        <th scope="col">
+                            <span data-i18n-text="password">Password</span>
+                        </th>
+                        <th scope="col">
+                            <span data-i18n-text="valid">Status</span>
+                        </th>
+                        <th scope="col">
+                            <span data-i18n-text="lastChecked">Last Checked</span>
+                        </th>
+                    </tr>
+                    
+                    {% for el in queryset %}
+                        <tr class="text-white">
+                            <th scope="col">
+                                {{ el.email }}
+                            </th>
+                            <th scope="col">
+                                {{ el.password }}
+                            </th>
+                            <th scope="col">
+                                {% if el.smtp_is_valid == True %}
+                                    Valid
+                                {% endif %}
+                                {% if el.smtp_is_valid == False %}
+                                    Invalid
+                                {% endif %}
+                                {% if el.smtp_is_valid == None %}
+                                    Unknown
+                                {% endif %}
+                            </th>
+                            <th scope="col">
+                                time
+                            </th>
+                        </tr>
+                    {% endfor %}
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <hr/>
+            <h4 data-i18n-text="smtpStat">SMTP STATISTICS</h4>
+            <h6>All: <span id="smtp_all">{{ count_of_smtp }}</span></h6>
+            <h6>Checked: <span id="smtp_checked">{{ smtp_checked }}</span></h6>
+            <h6 style="color: lawngreen">
+                Valid: <span id="smtp_valid">{{ count_of_smtp_valid }}</span>
+            </h6>
+            <h6 style="color: red">Dead: <span id="smtp_dead">{{ count_of_smtp_invalid }}</span></h6>
+            <button class="btn btn-light"
+            type="button"
+            id="fetch-url-button"
+            >
+                <a href="{% url 'pooler:checking_smtp' %}" class="">SMTP check</a>
+            </button>
+        </div>
     </div>
-</div>
 
-<div class="col-sm-12 col-md-6 col-xl-6">
-    <div class="h-100 bg-secondary rounded p-4">
-      <div
-        class="d-flex align-items-center justify-content-between mb-2"
-      >
-        <h4 class="mb-0" data-i18n-text="imapInfo">IMAP INFO</h4>
-      </div>
-      <hr />
-      <div class="table-responsive">
-        <table
-          class="table text-start align-middle table-bordered table-hover mb-0"
-          id="imap_info_table"
-        >
-          <thead>
-            <tr class="text-white">
-              <th scope="col">
-                <span data-i18n-text="email">Email</span>
-              </th>
-              <th scope="col">
-                <span data-i18n-text="password">Password</span>
-              </th>
-              <th scope="col">
-                <span data-i18n-text="status">Status</span>
-              </th>
-              <th scope="col">
-                <span data-i18n-text="lastChecked">Last Checked</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <hr />
-      <h4 data-i18n-text="imapStat">IMAP STATISTICS</h4>
-      <h6>Checked: <span id="imap_checked">0</span></h6>
-      <h6 style="color: lawngreen">
-        Valid: <span id="imap_valid">0</span>
-      </h6>
-      <h6 style="color: red">Dead: <span id="imap_dead">0</span></h6>
+    <div class="col-sm-12 col-md-6 col-xl-6">
+        <div class="h-100 bg-secondary rounded p-4">
+            <div
+                    class="d-flex align-items-center justify-content-between mb-2"
+            >
+                <h4 class="mb-0" data-i18n-text="imapInfo">IMAP INFO</h4>
+            </div>
+            <hr/>
+            <div class="table-responsive">
+                <table
+                        class="table text-start align-middle table-bordered table-hover mb-0"
+                        id="imap_info_table"
+                >
+                    <thead>
+                    <tr class="text-white">
+                        <th scope="col">
+                            <span data-i18n-text="email">Email</span>
+                        </th>
+                        <th scope="col">
+                            <span data-i18n-text="password">Password</span>
+                        </th>
+                        <th scope="col">
+                            <span data-i18n-text="status">Status</span>
+                        </th>
+                        <th scope="col">
+                            <span data-i18n-text="lastChecked">Last Checked</span>
+                        </th>
+                    </tr>
+                    {% for el in queryset %}
+                        <tr class="text-white">
+                            <th scope="col">
+                                {{ el.email }}
+                            </th>
+                            <th scope="col">
+                                {{ el.password }}
+                            </th>
+                            <th scope="col">
+                                {% if el.imap_is_valid == True %}
+                                    Valid
+                                {% endif %}
+                                {% if el.imap_is_valid == False %}
+                                    Invalid
+                                {% endif %}
+                                {% if el.imap_is_valid == None %}
+                                    Unknown
+                                {% endif %}
+                            </th>
+                            <th scope="col">
+                                time
+                            </th>
+                        </tr>
+                    {% endfor %}
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <hr/>
+            <h4 data-i18n-text="imapStat">IMAP STATISTICS</h4>
+            <h6>All: <span id="imap_all">{{ count_of_smtp }}</span></h6>
+            <h6>Checked: <span id="imap_checked">{{ imap_checked }}</span></h6>
+            <h6 style="color: lawngreen">
+                Valid: <span id="imap_valid">{{ count_imap_valid }}</span>
+            </h6>
+            <h6 style="color: red">Dead: <span id="imap_dead">{{ count_imap_invalid }}</span></h6>
+            <button class="btn btn-light"
+                    type="button"
+                    id="fetch-url-button"
+            >
+                <a href="{% url 'pooler:checking_imap' %}" class="">IMAP check</a>
+            </button>
+        </div>
     </div>
-  </div>
 
-  <div class="col-sm-12 col-md-6 col-xl-12">
-    <div class="h-100 bg-secondary rounded p-4">
-      <div
-        class="d-flex align-items-center justify-content-between mb-2"
-      >
-        <h4 class="mb-0" data-i18n-text="logs">LOGS</h4>
-      </div>
-      <hr />
-      <div id="console_logs_container">
-        <pre id="console_logs" class="console"></pre>
-      </div>
-      <button
-        class="btn btn-sm btn-primary"
-        id="clear-logs"
-        type="button"
-      >
-        Clear
-      </button>
-      <button
-        class="btn btn-sm btn-primary"
-        id="clear-logs"
-        type="button"
-        style="margin-left: 1em"
-      >
-        Download Logs
-      </button>
+    <div class="col-sm-12 col-md-6 col-xl-12">
+        <div class="h-100 bg-secondary rounded p-4">
+            <div
+                    class="d-flex align-items-center justify-content-between mb-2"
+            >
+                <h4 class="mb-0" data-i18n-text="logs">LOGS</h4>
+            </div>
+            <hr/>
+            <div id="console_logs_container">
+                <pre id="console_logs" class="console"></pre>
+            </div>
+            <button
+                    class="btn btn-sm btn-primary"
+                    id="clear-logs"
+                    type="button"
+            >
+                Clear
+            </button>
+            <button
+                    class="btn btn-sm btn-primary"
+                    id="clear-logs"
+                    type="button"
+                    style="margin-left: 1em"
+            >
+                Download Logs
+            </button>
+        </div>
     </div>
-</div>
 {% endblock info %}
 
