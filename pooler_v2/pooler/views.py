@@ -48,7 +48,7 @@ def redirect_to_panel(request):
     return redirect(reverse_lazy('pooler:panel'))
 
 
-# @login_required(login_url='users:login')
+@login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel(request):
     queryset = ExtractedData.objects.all()
