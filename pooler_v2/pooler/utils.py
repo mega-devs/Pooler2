@@ -1,3 +1,5 @@
+import aiohttp
+from aiohttp_socks import ProxyConnector
 import asyncio
 import hashlib
 import imaplib
@@ -7,12 +9,17 @@ import os
 import random
 import zipfile
 import string
+import psutil
+import ssl
+import time
+import pytz
 from datetime import datetime, timedelta
 from django.db import IntegrityError
 # from .models import EmailCheck
 import aiofiles
 import aioimaplib
 import aiosmtplib
+from root.celery import app
 from validate_email_address import validate_email
 
 from files.models import ExtractedData
@@ -237,7 +244,7 @@ def get_email_bd_data():
     emails_data = []
     data = ExtractedData.objects.all()
     for el in data:
-        emails_data.append({'smtp_server': el['provider'], 'email': el['email'], 'password': el['password']})
+        emails_data.append({'smtp_server': el.provider, 'email': el.email, 'password': el.password})
     return emails_data
 
 
@@ -312,13 +319,14 @@ async def process_chunk_from_file(chunk, results):
 
 async def process_chunk_from_db(chunk, smtp_results):
     """Так же проверяет почтовые адреса на валидность SMTP, но данные загружены из бд."""
-    status = 'invalid'
+    # status = False
 
-    email = chunk['email']
+    email = chunk.get('email')
+    print(f'{email=}')
     name, server = email.split('@')
     smtp_server = 'smtp.' + server
 
-    password = chunk['password']
+    password = chunk.get('password')
 
     try:
         match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
@@ -330,21 +338,27 @@ async def process_chunk_from_db(chunk, smtp_results):
                 if mx_record is not None:
                     server = smtplib.SMTP()
                     server.set_debuglevel(0)
-
-                    try:
-                        server.connect(mx_record)
-                        code, message = server.helo(smtp_server)
-                        server = smtplib.SMTP(smtp_server, 587)
-                        if code == 250:
-                            result_2 = validate_email(email, check_mx=False)
-                            if result_2:
-                                status = True
-                    except Exception as ex:
-                        print(ex)
+                    server.connect(mx_record)
+                    code, message = server.helo(smtp_server)
+                    server = smtplib.SMTP(smtp_server, 587)
+                    if code == 250:
+                        result_2 = validate_email(email, check_mx=False)
+                        print(result_2)
+                        if result_2:
+                            status = True
+                        elif result_2 == False:
+                            status = False
+                        else:
+                            status = None
             except Exception as ex:
                 print(ex)
+        #     else:
+        #         status = False
+        # else:
+        #     status = False
 
-        smtp_result = {'email': email, 'password': password, 'status': status}
+        smtp_result = {'email': email, 'password': password, 'status': status,
+                       'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         smtp_results.append(smtp_result)
         # status = await driver.check_connection(email, password)
         # if status == 'valid':
@@ -359,13 +373,14 @@ async def process_chunk_from_db(chunk, smtp_results):
         logger.error(f"Error checking connection for email {email}: {e}")
 
 
+@app.task
 async def imap_process_chunk_from_db(chunk, imap_results):
     """Так же проверяет почтовые адреса на валидность IMAP, но данные загружены из бд."""
-    email = chunk['email']
+    email = chunk.get('email')
     name, server = email.split('@')
     imap_server = 'imap.' + server
 
-    password = chunk['password']
+    password = chunk.get('password')
 
     try:
         match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
@@ -386,7 +401,8 @@ async def imap_process_chunk_from_db(chunk, imap_results):
             except Exception as ex:
                 print(ex)
 
-        imap_result = {'email': email, 'password': password, 'status': imap_status}
+        imap_result = {'email': email, 'password': password, 'status': imap_status,
+                       'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         imap_results.append(imap_result)
         # status = await driver.check_connection(email, password)
         # if status == 'valid':
@@ -401,12 +417,13 @@ async def imap_process_chunk_from_db(chunk, imap_results):
         logger.error(f"Error checking connection for email {email}: {e}")
 
 
+@app.task
 async def check_smtp_imap_emails_from_zip(filename):
     '''Основная функция проверки почтовых адресов по smtp и imap, в ней реализована работа с архивом и далее данные
     передаются на функцию process_chunk_from_file результатом является добавление значений в записи в базе данных по
     соответствующим почтовым адресам.'''
     # smtp_driver = SmtpDriver()
-    results =[]
+    results = []
 
     file_path = os.path.join(settings.MEDIA_ROOT, "combofiles", filename)
 
@@ -433,8 +450,8 @@ async def check_smtp_imap_emails_from_zip(filename):
         ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'], imap_is_valid=el[
             'imap_status'])
 
-
-async def check_smtp_emails_from_db(filename):
+@app.task
+async def check_smtp_emails_from_db():
     '''Основная функция проверки почтовых адресов SMTP, запускает подфункцию process_chunk_from_db'''
     # smtp_driver = SmtpDriver()
     smtp_results = []
@@ -448,8 +465,8 @@ async def check_smtp_emails_from_db(filename):
     for el in smtp_results:
         ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
 
-
-async def check_imap_emails_from_db(filename):
+@app.task
+async def check_imap_emails_from_db():
     '''Основная функция, запускает подфункцию imap_process_chank from_db'''
     # smtp_driver = SmtpDriver()
     imap_results = []
@@ -462,6 +479,5 @@ async def check_imap_emails_from_db(filename):
 
     for el in imap_results:
         ExtractedData.objects.filter(email=el['email']).update(imap_is_valid=el['status'])
-
 
 # For fetch
