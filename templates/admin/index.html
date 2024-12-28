@@ -1,0 +1,180 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        body {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+        }
+        .card {
+            background-color: #2d2d2d !important;
+            border: 1px solid #404040 !important;
+        }
+        .card-header {
+            background-color: #363636 !important;
+            border-bottom: 1px solid #404040 !important;
+        }
+        .stats-card {
+
+            background: #2d2d2d !important;
+            color: #ffffff !important;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .content-wrapper {
+            background-color: #1a1a1a !important;
+        }
+        .table {
+            color: #ffffff !important;
+        }
+        .table td, .table th {
+            border-color: #404040 !important;
+        }
+        .stats-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        .stats-label {
+            color: #888;
+            font-size: 14px;
+        }
+    </style>
+
+{% endblock %}
+{% block content %}
+    {{ block.super }}
+    
+    <div class="container-fluid">
+        <!-- Quick Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">2,547</div>
+                    <div class="stats-label">Total Emails Processed</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">85%</div>
+                    <div class="stats-label">SMTP Success Rate</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">73%</div>
+                    <div class="stats-label">IMAP Success Rate</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">156</div>
+                    <div class="stats-label">Active Users</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <!-- Email Validation Chart -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Email Validation Statistics</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="validationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Provider Distribution Chart -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Email Provider Distribution</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="providerChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block footer %}
+    {{ block.super }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Email Validation Chart
+            var validationCtx = document.getElementById('validationChart').getContext('2d');
+            new Chart(validationCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['SMTP Valid', 'SMTP Invalid', 'IMAP Valid', 'IMAP Invalid'],
+                    datasets: [{
+                        label: 'Number of Emails',
+                        data: [1250, 300, 950, 450],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Provider Distribution Chart
+            var providerCtx = document.getElementById('providerChart').getContext('2d');
+            new Chart(providerCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Gmail', 'Yahoo', 'Outlook', 'Others'],
+                    datasets: [{
+                        data: [45, 25, 20, 10],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}
