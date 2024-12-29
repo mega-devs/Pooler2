@@ -2,16 +2,16 @@ from __future__ import absolute_import, unicode_literals
 import os
 from celery import Celery
 
-# Установка переменных окружения
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "root.settings")
+# default Django settings module for the 'celery' program.
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'root.settings')
 
-# Создание приложения Celery
-app = Celery("pooler_v2")
+app = Celery('root')  # project name as the Celery app name
 
-# Загрузка конфигурации из Django
-app.config_from_object("django.conf:settings", namespace="CELERY")
+# - namespace='CELERY' means all celery-related configuration keys
+#   should have a `CELERY_` prefix.
+app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Автоматическое обнаружение задач
+# Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
 # Обновление конфигурации брокера
