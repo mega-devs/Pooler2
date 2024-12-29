@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'files.apps.FilesConfig',
     'telegram.apps.TelegramConfig',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [

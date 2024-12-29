@@ -68,3 +68,4 @@ wcwidth==0.2.13
 Werkzeug==3.0.3
 yarl==1.18.3
 django-jazzmin==2.6.0
+drf-yasg==1.21.7
