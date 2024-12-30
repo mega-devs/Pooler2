@@ -54,25 +54,25 @@
         <div class="row mb-4">
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="stats-number">2,547</div>
+                    <div class="stats-number">{{ total_emails }}</div>
                     <div class="stats-label">Total Emails Processed</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="stats-number">85%</div>
+                    <div class="stats-number">{{ smtp_success_rate }}%</div>
                     <div class="stats-label">SMTP Success Rate</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="stats-number">73%</div>
+                    <div class="stats-number">{{ imap_success_rate }}%</div>
                     <div class="stats-label">IMAP Success Rate</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="stats-number">156</div>
+                    <div class="stats-number">{{ active_users }}</div>
                     <div class="stats-label">Active Users</div>
                 </div>
             </div>
@@ -82,11 +82,11 @@
         <div class="row">
             <!-- Email Validation Chart -->
             <div class="col-md-6">
-                <div class="card">
+                <div class="card h-100">  <!-- Added h-100 class -->
                     <div class="card-header">
                         <h3 class="card-title">Email Validation Statistics</h3>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body d-flex align-items-center">  <!-- Added flexbox alignment -->
                         <canvas id="validationChart"></canvas>
                     </div>
                 </div>
@@ -94,17 +94,37 @@
             
             <!-- Provider Distribution Chart -->
             <div class="col-md-6">
-                <div class="card">
+                <div class="card h-100">  <!-- Added h-100 class -->
                     <div class="card-header">
                         <h3 class="card-title">Email Provider Distribution</h3>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body d-flex align-items-center">  <!-- Added flexbox alignment -->
                         <canvas id="providerChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="card-title">Backend Logs Console</h3>
+                            <div>
+                                <button class="btn btn-sm btn-success" onclick="refreshLogs()">Refresh</button>
+                                <button class="btn btn-sm btn-danger" onclick="clearLogs()">Clear</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="logsConsole" style="background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 5px; height: 400px; overflow-y: auto; font-family: monospace;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
     </div>
+    
 {% endblock %}
 
 {% block extrahead %}
@@ -124,7 +144,7 @@
                     labels: ['SMTP Valid', 'SMTP Invalid', 'IMAP Valid', 'IMAP Invalid'],
                     datasets: [{
                         label: 'Number of Emails',
-                        data: [1250, 300, 950, 450],
+                        data: [{{ smtp_valid }}, {{ smtp_invalid }}, {{ imap_valid }}, {{ imap_invalid }}],
                         backgroundColor: [
                             'rgba(75, 192, 192, 0.2)',
                             'rgba(255, 99, 132, 0.2)',
@@ -155,14 +175,16 @@
             new Chart(providerCtx, {
                 type: 'pie',
                 data: {
-                    labels: ['Gmail', 'Yahoo', 'Outlook', 'Others'],
+                    labels: [{% for provider in provider_labels %}'{{ provider }}',{% endfor %}],
                     datasets: [{
-                        data: [45, 25, 20, 10],
+                        data: [{% for count in provider_counts %}{{ count }},{% endfor %}],
                         backgroundColor: [
                             'rgba(255, 99, 132, 0.8)',
                             'rgba(54, 162, 235, 0.8)',
                             'rgba(255, 206, 86, 0.8)',
-                            'rgba(75, 192, 192, 0.8)'
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
                         ]
                     }]
                 },
@@ -176,5 +198,34 @@
                 }
             });
         });
+    </script>
+
+    <script>
+        async function refreshLogs() {
+            try {
+                const response = await fetch('/api/logs/');
+                const data = await response.json();
+                const logsConsole = document.getElementById('logsConsole');
+                logsConsole.innerHTML = data.logs.join('<br>');
+                logsConsole.scrollTop = logsConsole.scrollHeight;
+            } catch (error) {
+                console.error('Error fetching logs:', error);
+            }
+        }
+    
+        async function clearLogs() {
+            try {
+                await fetch('/api/logs/clear/', { method: 'POST' });
+                document.getElementById('logsConsole').innerHTML = '';
+            } catch (error) {
+                console.error('Error clearing logs:', error);
+            }
+        }
+    
+        // Auto-refresh logs every 10 seconds
+        setInterval(refreshLogs, 10000);
+        
+        // Initial load
+        refreshLogs();
     </script>
 {% endblock %}

@@ -179,9 +179,10 @@ async def read_logs(ind):
     return JsonResponse({"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)})
 
 
-async def get_logs(request, ind):
-    logs = await read_logs(ind)
-    return logs
+async def get_logs(request):
+    # logs = await read_logs(ind)
+    logs = await read_logs(0)
+    return JsonResponse({"logs": logs})
 
 
 async def clear_temp_logs(request):
