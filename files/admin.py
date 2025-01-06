@@ -1,18 +1,24 @@
 from django.contrib import admin
 from django.db.models import Count
 from django.contrib.auth import get_user_model
+
+from files.resources import ExtractedDataResource, UploadedFileResource
 from .models import UploadedFile, ExtractedData
-from users.admin import CustomUserAdmin  # Import the existing CustomUserAdmin
+from import_export.admin import ImportExportModelAdmin
+from users.admin import CustomUserAdmin
 
 User = get_user_model()
 
-class UploadedFileAdmin(admin.ModelAdmin):
+
+class UploadedFileAdmin(ImportExportModelAdmin):
+    resource_class = UploadedFileResource
     list_display = ('filename', 'upload_date', 'country', 'duplicate_count', 'origin', 'is_checked')
     list_filter = ('upload_date', 'country', 'origin', 'is_checked')
     search_fields = ('filename', 'country', 'origin')
     ordering = ('-upload_date',)
 
-class ExtractedDataAdmin(admin.ModelAdmin):
+class ExtractedDataAdmin(ImportExportModelAdmin):
+    resource_class = ExtractedDataResource
     list_display = ('filename', 'email', 'provider', 'country', 'uploaded_file', 'smtp_is_valid', 'imap_is_valid')
     list_filter = ('provider', 'country', 'smtp_is_valid', 'imap_is_valid')
     search_fields = ('email', 'provider', 'filename', 'uploaded_file__filename')
@@ -53,7 +59,7 @@ class CustomAdminSite(admin.AdminSite):
 admin_site = CustomAdminSite()
 
 # Register all models with the custom admin site
-admin_site.register(User, CustomUserAdmin)  # Register User with its custom admin
+admin_site.register(User, CustomUserAdmin)
 admin_site.register(UploadedFile, UploadedFileAdmin)
 admin_site.register(ExtractedData, ExtractedDataAdmin)
 
