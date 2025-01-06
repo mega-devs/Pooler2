@@ -85,11 +85,12 @@ def panel_table(request):
 
 
 # --- Загрузка файла ---
+from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 @swagger_auto_schema(
-    method='post',
+    methods=['post'],
     operation_description="Upload a combo file",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
@@ -99,6 +100,8 @@ from drf_yasg import openapi
     ),
     responses={200: "File uploaded successfully"}
 )
+
+@api_view(['POST'])
 @require_POST
 def upload_combofile(request):
     if 'file' not in request.FILES:
@@ -189,12 +192,11 @@ def download_combofile(request, filename):
 
     if not os.path.exists(file_path):
         raise Http404(f"File {filename} not found.")
-
     return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
 
 
-@require_GET
-def download_file(request, filename):
+# --- File Downloads ---
+def download_combofile(request, filename):
     directory = os.path.join(settings.BASE_DIR, "data", "combofiles")
     file_path = os.path.join(directory, filename)
 
@@ -204,17 +206,17 @@ def download_file(request, filename):
     return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
 
 
-# --- Управление файлами ---
+# --- File Management ---
 @login_required
 def uploaded_files_list(request):
-    """Просмотр списка загруженных файлов."""
+    """View list of uploaded files."""
     user_files = UploadedFile.objects.filter(user=request.user)
     return render(request, 'uploaded_files_list.html', {'uploaded_files': user_files})
 
 
 @login_required
 def uploaded_file_update(request, pk):
-    """Обновление информации о загруженном файле."""
+    """Update uploaded file information."""
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
     if request.method == 'POST':
@@ -230,7 +232,7 @@ def uploaded_file_update(request, pk):
 
 @login_required
 def uploaded_file_delete(request, pk):
-    """Удаление загруженного файла вместе с объектом базы данных и распакованными файлами."""
+    """Delete uploaded file along with database object and unpacked files."""
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
     if request.method == 'POST':
@@ -239,47 +241,47 @@ def uploaded_file_delete(request, pk):
 
         try:
             with transaction.atomic():
-                # Удаляем связанные записи ExtractedData
+                # Delete related ExtractedData records
                 extracted_data_deleted, _ = ExtractedData.objects.filter(uploaded_file=file_obj).delete()
                 logger.info(f"Удалено связанных записей: {extracted_data_deleted}")
 
-                # Удаляем распакованные файлы и папки
+                # Delete unpacked files and folders
                 if os.path.exists(extracted_path):
                     for root, dirs, files in os.walk(extracted_path, topdown=False):
                         for file in files:
                             os.remove(os.path.join(root, file))
                         for dir in dirs:
                             os.rmdir(os.path.join(root, dir))
-                    os.rmdir(extracted_path)  # Удаляем саму папку
-                    logger.info(f"Папка {extracted_path} успешно удалена.")
+                    os.rmdir(extracted_path) # Delete the folder itself
+                    logger.info(f"Folder {extracted_path} successfully deleted.")
                 else:
-                    logger.warning(f"Папка {extracted_path} не найдена.")
+                    logger.warning(f"Folder {extracted_path} not found.")
 
-                # Удаляем оригинальный файл с диска
+                # Delete original file from disk
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                    logger.info(f"Файл {file_path} удален с диска.")
+                    logger.info(f"File {file_path} deleted from disk.")
                 else:
-                    logger.warning(f"Файл {file_path} не найден на диске.")
+                    logger.warning(f"File {file_path} not found on disk.")
 
-                # Удаляем запись UploadedFile
+                # Delete UploadedFile record
                 file_obj.delete()
-                logger.info(f"Объект {file_obj.filename} удален из базы данных.")
+                logger.info(f"Object {file_obj.filename} deleted from database.")
 
                 return redirect('files:uploaded_files_list')
 
         except IntegrityError as e:
-            logger.error(f"Ошибка удаления объекта: {e}")
+            logger.error(f"Error deleting object: {e}")
             return render(request, 'uploaded_file_confirm_delete.html', {
                 'file': file_obj,
-                'error': f"Ошибка удаления объекта: {e}"
+                'error': f"Error deleting object: {e}"
             })
 
         except Exception as e:
-            logger.error(f"Ошибка удаления файла {file_path} или папки {extracted_path}: {e}")
+            logger.error(f"Error deleting file {file_path} or folder {extracted_path}: {e}")
             return render(request, 'uploaded_file_confirm_delete.html', {
                 'file': file_obj,
-                'error': f"Ошибка удаления файла или папки: {e}"
+                'error': f"Error deleting file or folder: {e}"
             })
 
     return render(request, 'uploaded_file_confirm_delete.html', {'file': file_obj})
