@@ -85,6 +85,20 @@ def panel_table(request):
 
 
 # --- Загрузка файла ---
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
+@swagger_auto_schema(
+    method='post',
+    operation_description="Upload a combo file",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'file': openapi.Schema(type=openapi.TYPE_FILE)
+        }
+    ),
+    responses={200: "File uploaded successfully"}
+)
 @require_POST
 def upload_combofile(request):
     if 'file' not in request.FILES:

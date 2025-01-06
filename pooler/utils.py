@@ -375,7 +375,8 @@ async def process_chunk_from_db(chunk, smtp_results):
 
 @app.task
 async def imap_process_chunk_from_db(chunk, imap_results):
-    """Так же проверяет почтовые адреса на валидность IMAP, но данные загружены из бд."""
+    """Validates email addresses via IMAP protocol using data loaded from database"""
+    
     email = chunk.get('email')
     name, server = email.split('@')
     imap_server = 'imap.' + server
@@ -419,10 +420,8 @@ async def imap_process_chunk_from_db(chunk, imap_results):
 
 @app.task
 async def check_smtp_imap_emails_from_zip(filename):
-    '''Основная функция проверки почтовых адресов по smtp и imap, в ней реализована работа с архивом и далее данные
-    передаются на функцию process_chunk_from_file результатом является добавление значений в записи в базе данных по
-    соответствующим почтовым адресам.'''
-    # smtp_driver = SmtpDriver()
+    '''Main function for checking SMTP and IMAP email addresses, handles archive processing and passes data 
+    to process_chunk_from_file function. Results in updating database records for corresponding email addresses'''
     results = []
 
     file_path = os.path.join(settings.MEDIA_ROOT, "combofiles", filename)
@@ -452,10 +451,8 @@ async def check_smtp_imap_emails_from_zip(filename):
 
 @app.task
 async def check_smtp_emails_from_db():
-    '''Основная функция проверки почтовых адресов SMTP, запускает подфункцию process_chunk_from_db'''
-    # smtp_driver = SmtpDriver()
+    '''Main function for checking SMTP email addresses, launches process_chunk_from_db subfunction'''
     smtp_results = []
-
     data = get_email_bd_data()
 
     tasks = [process_chunk_from_db(el, smtp_results) for el in
