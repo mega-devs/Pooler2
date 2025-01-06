@@ -18,12 +18,27 @@ from .tasks import async_handle_archive, async_process_uploaded_files
 from .service import remove_duplicate_lines, extract_country_from_filename
 from random import sample
 from django.http import HttpResponse
-
+from rest_framework.decorators import api_view
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 logger = logging.getLogger(__name__)
 
+@swagger_auto_schema(
+    methods=['post'],
+    operation_description="Upload a combo file",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'file': openapi.Schema(type=openapi.TYPE_FILE)
+        }
+    ),
+    responses={200: "File uploaded successfully"}
+)
 
-# --- Панель управления ---
+
+# --- Control Panel ---
+@api_view(['POST'])
 @login_required(login_url='users:login')
 def panel_table(request):
     """Отображение данных с пагинацией или случайным выбором."""
@@ -31,13 +46,13 @@ def panel_table(request):
     show_all = query_params.get('show_all') == 'true'
     random_count = int(query_params.get('random_count', 10))
 
-    # Выбор данных
+    # Data selection
     data = ExtractedData.objects.all()
 
-    # Получение уникальных стран
+    # Get unique countries
     countries = ExtractedData.objects.values_list('country', flat=True).distinct()
 
-    # Применение фильтров
+    # Apply filters
     provider_filter = query_params.get('provider')
     email_filter = query_params.get('email')
     country_filter = query_params.get('country')
@@ -50,15 +65,15 @@ def panel_table(request):
         data = data.filter(country__icontains=country_filter)
 
     if not show_all:
-        # Выводим случайные записи
+        # Output random records
         total_count = data.count()
         random_count = min(random_count, total_count)
         random_ids = sample(list(data.values_list('id', flat=True)), random_count)
         data = data.filter(id__in=random_ids)
         paginator = None
-        current_data_ids = list(data.values_list('id', flat=True))  # IDs случайных записей
+        current_data_ids = list(data.values_list('id', flat=True))  # IDs of random records
     else:
-        # Включаем пагинацию при "Show All"
+        # Enable pagination for "Show All"
         paginator = Paginator(data, 10)
         page = query_params.get('page', 1)
         try:
@@ -68,9 +83,9 @@ def panel_table(request):
         except EmptyPage:
             data = paginator.page(paginator.num_pages)
 
-        current_data_ids = list(data.object_list.values_list('id', flat=True))  # IDs записей текущей страницы
+        current_data_ids = list(data.object_list.values_list('id', flat=True))  # IDs of records on current page
 
-    # Сохраняем IDs текущих записей в сессии
+    # Save current record IDs in session
     request.session['current_data_ids'] = current_data_ids
 
     return render(request, 'tables.html', {
@@ -84,22 +99,7 @@ def panel_table(request):
     })
 
 
-# --- Загрузка файла ---
-from rest_framework.decorators import api_view
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
-
-@swagger_auto_schema(
-    methods=['post'],
-    operation_description="Upload a combo file",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'file': openapi.Schema(type=openapi.TYPE_FILE)
-        }
-    ),
-    responses={200: "File uploaded successfully"}
-)
+# --- File Upload ---
 
 @api_view(['POST'])
 @require_POST
@@ -141,11 +141,12 @@ def upload_combofile(request):
         return JsonResponse({'status': 500, 'error': str(e)})
 
 
-# --- Обработка файлов ---
+# --- File Processing ---
+@api_view(['POST'])
 def process_file(file_path, file_name, uploaded_file):
-    """Извлекает данные из распакованного файла."""
+    """Extracts data from the unpacked file."""
     try:
-        # Проверка формата файла
+        # Check file format
         mime_type, _ = mimetypes.guess_type(file_path)
         if mime_type != 'text/plain':
             raise ValueError(f"Unsupported file type: {mime_type}. Only text files are supported.")
@@ -184,7 +185,20 @@ def process_file(file_path, file_name, uploaded_file):
         logger.error(f"Unexpected error processing file {file_name}: {e}")
 
 
-# --- Загрузка файлов ---
+@api_view(['POST'])
+@require_GET
+def download_file(request, filename):
+    directory = os.path.join(settings.BASE_DIR, "data", "combofiles")
+    file_path = os.path.join(directory, filename)
+
+    if not os.path.exists(file_path):
+        raise Http404(f"File {filename} not found.")
+
+    return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
+
+
+# --- File Downloads ---
+@api_view(['POST'])
 @require_GET
 def download_combofile(request, filename):
     directory = os.path.join(settings.BASE_DIR, 'data', 'combofiles')
@@ -196,6 +210,7 @@ def download_combofile(request, filename):
 
 
 # --- File Downloads ---
+@api_view(['POST'])
 def download_combofile(request, filename):
     directory = os.path.join(settings.BASE_DIR, "data", "combofiles")
     file_path = os.path.join(directory, filename)
@@ -207,6 +222,7 @@ def download_combofile(request, filename):
 
 
 # --- File Management ---
+@api_view(['POST'])
 @login_required
 def uploaded_files_list(request):
     """View list of uploaded files."""
@@ -214,6 +230,7 @@ def uploaded_files_list(request):
     return render(request, 'uploaded_files_list.html', {'uploaded_files': user_files})
 
 
+@api_view(['POST'])
 @login_required
 def uploaded_file_update(request, pk):
     """Update uploaded file information."""
@@ -230,6 +247,7 @@ def uploaded_file_update(request, pk):
     return render(request, 'uploaded_files_form.html', {'form': form, 'file': file_obj})
 
 
+@api_view(['POST'])
 @login_required
 def uploaded_file_delete(request, pk):
     """Delete uploaded file along with database object and unpacked files."""
@@ -287,20 +305,21 @@ def uploaded_file_delete(request, pk):
     return render(request, 'uploaded_file_confirm_delete.html', {'file': file_obj})
 
 
-################################ Работа с загруженными и распакованными данными
+################################ Working with uploaded and unpacked data
+@api_view(['POST'])
 @login_required
 def download_txt(request):
-    """Скачивание данных, отображаемых на текущей странице, в формате TXT."""
+    """Download data displayed on the current page in TXT format."""
     current_data_ids = request.session.get('current_data_ids', [])
 
-    # Получение записей, видимых на странице
+    # Get records visible on the page
     data = ExtractedData.objects.filter(id__in=current_data_ids)
 
-    # Создание TXT файла
+    # Create TXT file
     response = HttpResponse(content_type='text/plain')
     response['Content-Disposition'] = 'attachment; filename="extracted_data.txt"'
 
-    # Генерация содержимого файла
+    # Generate file content
     for item in data:
         line = (
             f"Line: {item.line_number} | "
@@ -317,9 +336,10 @@ def download_txt(request):
 
 
 
+@api_view(['POST'])
 @login_required
 def extracted_data_update(request, pk):
-    """Редактирование распакованных данных"""
+    """Edit extracted data"""
     data_obj = get_object_or_404(ExtractedData, pk=pk)
 
     if request.method == 'POST':
@@ -333,9 +353,10 @@ def extracted_data_update(request, pk):
     return render(request, 'extracted_data_form.html', {'form': form, 'data': data_obj})
 
 
+@api_view(['POST'])
 @login_required
 def extracted_data_delete(request, pk):
-    """Удаление распакованных данных с подтверждением"""
+    """Delete extracted data with confirmation"""
     data_obj = get_object_or_404(ExtractedData, pk=pk)
 
     if request.method == 'POST':
@@ -343,24 +364,24 @@ def extracted_data_delete(request, pk):
 
         try:
             with transaction.atomic():
-                # Удаляем файл с сервера
+                # Delete file from server
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                    logger.info(f"Файл {file_path} успешно удален с сервера.")
+                    logger.info(f"File {file_path} successfully deleted from server.")
                 else:
-                    logger.warning(f"Файл {file_path} не найден на сервере.")
+                    logger.warning(f"File {file_path} not found on server.")
 
-                # Удаляем запись из базы данных
+                # Delete record from database
                 data_obj.delete()
-                logger.info(f"Объект {data_obj.email} удален из базы данных.")
+                logger.info(f"Object {data_obj.email} deleted from database.")
                 return redirect('files:panel_table')
 
         except Exception as e:
-            logger.error(f"Ошибка при удалении {data_obj.email}: {e}")
+            logger.error(f"Error while deleting {data_obj.email}: {e}")
             return render(request, 'extracted_data_confirm_delete.html', {
                 'data': data_obj,
-                'error': f"Ошибка удаления объекта: {e}"
+                'error': f"Error deleting object: {e}"
             })
 
-    # Отображаем страницу подтверждения удаления при GET-запросе
+    # Display delete confirmation page on GET request
     return render(request, 'extracted_data_confirm_delete.html', {'data': data_obj})
