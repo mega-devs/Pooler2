@@ -1,3 +1,42 @@
+SETUP:
+
+1. First, create the .env file:
+```
+nano .env
+```
+
+2. Then, copy and paste the following into the .env file:
+```
+# PostgreSQL settings
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=pooler_db
+
+# Django settings
+SQL_ENGINE=django.db.backends.postgresql
+SQL_DATABASE=pooler_db
+SQL_USER=postgres
+SQL_PASSWORD=postgres
+SQL_HOST=db
+SQL_PORT=5432
+```
+
+2. Now build and run the Docker containers:
+```
+docker-compose build
+```
+
+3. Then, start the containers:
+```
+docker-compose up -d
+```
+
+4. To check the running containers:
+```
+docker-compose ps
+```
+
+
 The series of messages from MEGAMAILER.TO's CEO outlines a project to improve and enhance an existing codebase. Here is a detailed breakdown of the technical requirements and suggestions provided:
 
 1. **Implement a Database System**:
@@ -111,4 +150,3 @@ Step 3: Frontend Simplification
 
 a. Integrate PostgreSQL into the existing codebase and migrate any necessary data.
 b. Conduct a detailed review of the provided code repository to identify and fix issues affecting performance and reliability.
-
