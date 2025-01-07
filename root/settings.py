@@ -216,3 +216,18 @@ JAZZMIN_UI_TWEAKS = {
     },
     "actions_sticky_top": False
 }
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
+    'DISPLAY_OPERATION_ID': False,
+    'SUPPORTED_SUBMIT_METHODS': ['get', 'post', 'put', 'delete'],
+    'VALIDATOR_URL': None,
+}

@@ -4,6 +4,7 @@ from django.shortcuts import redirect
 from django.views.generic import CreateView
 from .forms import UserRegisterForm
 from .models import User
+from rest_framework.decorators import api_view
 
 
 class RegisterView(CreateView):
@@ -13,6 +14,10 @@ class RegisterView(CreateView):
     success_url = reverse_lazy('users:login')
 
 
+@api_view(['POST'])
 def custom_logout_view(request):
+    """
+    Handles user logout functionality.
+    """    
     logout(request)
     return redirect('/')

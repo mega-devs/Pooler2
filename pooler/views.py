@@ -54,7 +54,7 @@ def redirect_to_panel(request):
     return redirect(reverse_lazy('pooler:panel'))
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel(request):
@@ -72,21 +72,21 @@ def panel(request):
                                               imap_invalid_count, 'smtp_checked':smtp_checked, 'imap_checked':imap_checked})
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_table_placeholder(request):
     return render(request, 'tables.html', {'active_page': "tables"})
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
     return render(request, 'settings.html', {'active_page': "settings"})
 
 
-@api_view(['POST'])
+api_view(['POST'])
 @csrf_exempt
 def upload_file_by_url(request):
     if request.method == 'POST':
@@ -157,7 +157,7 @@ async def parse_messages(client, channel):
     return messages
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 async def read_existing_messages(filename):
     if os.path.exists(filename):
         async with aiofiles.open(filename, 'r', encoding='utf-8') as f:
@@ -195,7 +195,7 @@ async def read_logs(ind):
     return JsonResponse({"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)})
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 async def get_logs(request):
     # logs = await read_logs(ind)
     logs = await read_logs(0)

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+
 import zipfile
 from django.conf import settings
 from django.http import JsonResponse, FileResponse, Http404, HttpResponse, HttpResponseRedirect
@@ -10,11 +11,16 @@ from telethon import TelegramClient
 from pooler.views import read_existing_messages, write_messages, parse_messages
 from .utils import is_valid_telegram_username
 
+from rest_framework.decorators import api_view
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 
 api_id = '29719825'
 api_hash = '7fa19eeed8c2e5d35036fafb9a716f18'
 
 
+@api_view(['POST'])
 @csrf_exempt
 async def telegram_add_channel(request):
     if request.method == 'POST':
@@ -51,7 +57,7 @@ async def telegram_add_channel(request):
     return JsonResponse({'status': 405, 'message': 'Invalid HTTP method'}, status=405)
 
 
-
+@api_view(['GET'])
 async def download_files_from_tg(links):
     async with TelegramClient('session_name', api_id, api_hash) as client:
         files = []
@@ -63,7 +69,7 @@ async def download_files_from_tg(links):
         return files
 
 
-
+@api_view(['GET'])
 @require_GET
 async def get_combofiles_from_tg(request):
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
@@ -93,7 +99,7 @@ async def get_combofiles_from_tg(request):
             os.remove(file)
 
 
-
+@api_view(['GET'])
 async def download_files_from_tg(links):
     async with TelegramClient('session_name', api_id, api_hash) as client:
         files = []
@@ -105,6 +111,7 @@ async def download_files_from_tg(links):
         return files
 
 
+@api_view(['GET'])
 @require_GET
 async def get_from_tg(request):
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")

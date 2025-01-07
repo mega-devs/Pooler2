@@ -2,6 +2,7 @@ import logging
 import os
 import mimetypes
 import re
+
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse, FileResponse, Http404, HttpResponseRedirect
@@ -18,30 +19,33 @@ from .tasks import async_handle_archive, async_process_uploaded_files
 from .service import remove_duplicate_lines, extract_country_from_filename
 from random import sample
 from django.http import HttpResponse
+
 from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
+
 logger = logging.getLogger(__name__)
 
-@swagger_auto_schema(
-    methods=['post'],
-    operation_description="Upload a combo file",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'file': openapi.Schema(type=openapi.TYPE_FILE)
-        }
-    ),
-    responses={200: "File uploaded successfully"}
-)
+# @swagger_auto_schema(
+#     methods=['post'],
+#     operation_description="Upload a combo file",
+#     request_body=openapi.Schema(
+#         type=openapi.TYPE_OBJECT,
+#         properties={
+#             'file': openapi.Schema(type=openapi.TYPE_FILE)
+#         }
+#     ),
+#     responses={200: "File uploaded successfully"}
+# )
 
 
 # --- Control Panel ---
-@api_view(['POST'])
+@api_view(['GET'])
 @login_required(login_url='users:login')
 def panel_table(request):
-    """Отображение данных с пагинацией или случайным выбором."""
+    """Display data with pagination or random selection."""
+
     query_params = request.GET
     show_all = query_params.get('show_all') == 'true'
     random_count = int(query_params.get('random_count', 10))
@@ -100,10 +104,11 @@ def panel_table(request):
 
 
 # --- File Upload ---
-
 @api_view(['POST'])
 @require_POST
 def upload_combofile(request):
+    """Handles file upload and initiates async processing."""
+
     if 'file' not in request.FILES:
         return JsonResponse({'status': 404, 'error': 'No file part'})
 
@@ -130,7 +135,7 @@ def upload_combofile(request):
             user=request.user
         )
 
-        # Асинхронная обработка
+        # Async processing
         async_handle_archive.delay(file_path, save_path)
         async_process_uploaded_files.delay(save_path, uploaded_file.id)
 
@@ -185,9 +190,11 @@ def process_file(file_path, file_name, uploaded_file):
         logger.error(f"Unexpected error processing file {file_name}: {e}")
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @require_GET
 def download_file(request, filename):
+    """Serves requested file for download."""
+
     directory = os.path.join(settings.BASE_DIR, "data", "combofiles")
     file_path = os.path.join(directory, filename)
 
@@ -198,9 +205,11 @@ def download_file(request, filename):
 
 
 # --- File Downloads ---
-@api_view(['POST'])
+@api_view(['GET'])
 @require_GET
 def download_combofile(request, filename):
+    """ Handles file downloads."""
+
     directory = os.path.join(settings.BASE_DIR, 'data', 'combofiles')
     file_path = os.path.join(directory, filename)
 
@@ -222,18 +231,20 @@ def download_combofile(request, filename):
 
 
 # --- File Management ---
-@api_view(['POST'])
+@api_view(['GET'])
 @login_required
 def uploaded_files_list(request):
     """View list of uploaded files."""
+
     user_files = UploadedFile.objects.filter(user=request.user)
     return render(request, 'uploaded_files_list.html', {'uploaded_files': user_files})
 
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @login_required
 def uploaded_file_update(request, pk):
     """Update uploaded file information."""
+
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
     if request.method == 'POST':
@@ -247,10 +258,11 @@ def uploaded_file_update(request, pk):
     return render(request, 'uploaded_files_form.html', {'form': form, 'file': file_obj})
 
 
-@api_view(['POST'])
+@api_view(['DELETE'])
 @login_required
 def uploaded_file_delete(request, pk):
     """Delete uploaded file along with database object and unpacked files."""
+
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
     if request.method == 'POST':
@@ -305,11 +317,12 @@ def uploaded_file_delete(request, pk):
     return render(request, 'uploaded_file_confirm_delete.html', {'file': file_obj})
 
 
-################################ Working with uploaded and unpacked data
-@api_view(['POST'])
+### Working with uploaded and unpacked data
+@api_view(['GET', 'POST'])
 @login_required
 def download_txt(request):
     """Download data displayed on the current page in TXT format."""
+
     current_data_ids = request.session.get('current_data_ids', [])
 
     # Get records visible on the page
@@ -336,10 +349,11 @@ def download_txt(request):
 
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @login_required
 def extracted_data_update(request, pk):
     """Edit extracted data"""
+
     data_obj = get_object_or_404(ExtractedData, pk=pk)
 
     if request.method == 'POST':
@@ -353,10 +367,11 @@ def extracted_data_update(request, pk):
     return render(request, 'extracted_data_form.html', {'form': form, 'data': data_obj})
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @login_required
 def extracted_data_delete(request, pk):
     """Delete extracted data with confirmation"""
+    
     data_obj = get_object_or_404(ExtractedData, pk=pk)
 
     if request.method == 'POST':
