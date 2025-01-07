@@ -3,28 +3,33 @@ import io
 import json
 import logging
 import os
-
 import zipfile
 
-import chardet
+# third-party imports
 import aiofiles
+import chardet
 import requests
 from django.conf import settings
-from django.http import JsonResponse, FileResponse, Http404, HttpResponse, HttpResponseRedirect
-from django.shortcuts import redirect, render, get_object_or_404
-from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.http import (FileResponse, Http404, HttpResponse, HttpResponseRedirect,
+        JsonResponse)
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import (require_GET, require_http_methods,
+                         require_POST)
+from rest_framework.decorators import api_view
+
+# local imports
 from .pooler_logging import logger_temp_smtp
-from .utils import extract_country_from_filename, chunks, get_email_bd_data, check_smtp_emails_from_db, \
-    check_smtp_imap_emails_from_zip, check_imap_emails_from_db
+from .utils import (check_imap_emails_from_db, check_smtp_emails_from_db,
+    check_smtp_imap_emails_from_zip, chunks,
+    extract_country_from_filename, get_email_bd_data)
 from files.models import ExtractedData
 import mimetypes
-from django.urls import reverse_lazy
+
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
-
 logger = logging.getLogger(__name__)
 
 
