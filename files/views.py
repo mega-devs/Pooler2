@@ -12,6 +12,8 @@ from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
+
+from files.serializers import ExtractedDataSerializer, UploadedFileSerializer
 from .models import UploadedFile, ExtractedData
 from .forms import UploadedFileForm, ExtractedDataForm
 from .service import determine_origin
@@ -20,6 +22,7 @@ from .service import remove_duplicate_lines, extract_country_from_filename
 from random import sample
 from django.http import HttpResponse
 
+from rest_framework import viewsets
 from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -400,3 +403,43 @@ def extracted_data_delete(request, pk):
 
     # Display delete confirmation page on GET request
     return render(request, 'extracted_data_confirm_delete.html', {'data': data_obj})
+
+
+class ExtractedDataModelViewSet(viewsets.ModelViewSet):
+    queryset = ExtractedData.objects.all()
+    serializer_class = ExtractedDataSerializer
+
+    @swagger_auto_schema(
+        operation_description="Get list of items",
+        responses={200: ExtractedDataSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="Create new item",
+        request_body=ExtractedDataSerializer,
+        responses={201: ExtractedDataSerializer()}
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+    
+
+class UploadedFileModelViewSet(viewsets.ModelViewSet):
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer
+
+    @swagger_auto_schema(
+        operation_description="Get list of items",
+        responses={200: UploadedFileSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="Create new item",
+        request_body=UploadedFileSerializer,
+        responses={201: UploadedFileSerializer()}
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
