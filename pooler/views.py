@@ -48,11 +48,13 @@ logger = logging.getLogger(__name__)
 #     return render(request, "signin.html") #render login page
 
 
+@api_view(['GET'])
 @require_http_methods(["GET"])
 def redirect_to_panel(request):
     return redirect(reverse_lazy('pooler:panel'))
 
 
+@api_view(['GET'])
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel(request):
@@ -70,18 +72,21 @@ def panel(request):
                                               imap_invalid_count, 'smtp_checked':smtp_checked, 'imap_checked':imap_checked})
 
 
+@api_view(['GET'])
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_table_placeholder(request):
     return render(request, 'tables.html', {'active_page': "tables"})
 
 
+@api_view(['GET'])
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
     return render(request, 'settings.html', {'active_page': "settings"})
 
 
+@api_view(['POST'])
 @csrf_exempt
 def upload_file_by_url(request):
     if request.method == 'POST':
@@ -116,8 +121,9 @@ def upload_file_by_url(request):
             return JsonResponse({'status': 500, 'error': str(e)}, status=500)
     else:
         return JsonResponse({'status': 405, 'error': 'Method not allowed'}, status=405)
+    
 
-
+@api_view(['GET'])
 @require_GET
 async def check_smtp_view(request):
     try:
@@ -128,6 +134,7 @@ async def check_smtp_view(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@api_view(['GET'])
 @require_GET
 async def check_imap_view(request):
     try:
@@ -138,6 +145,7 @@ async def check_imap_view(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@api_view(['GET'])
 async def parse_messages(client, channel):
     messages = []
     async for message in client.iter_messages(channel, limit=10):
@@ -149,6 +157,7 @@ async def parse_messages(client, channel):
     return messages
 
 
+@api_view(['POST'])
 async def read_existing_messages(filename):
     if os.path.exists(filename):
         async with aiofiles.open(filename, 'r', encoding='utf-8') as f:
@@ -157,11 +166,13 @@ async def read_existing_messages(filename):
     return []
 
 
+@api_view(['POST'])
 async def write_messages(filename, messages):
     async with aiofiles.open(filename, 'w', encoding='utf-8') as f:
         await f.write(json.dumps(messages, ensure_ascii=False, indent=4))
 
 
+@api_view(['GET'])
 async def read_logs(ind):
     smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
     imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
@@ -184,12 +195,14 @@ async def read_logs(ind):
     return JsonResponse({"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)})
 
 
+@api_view(['POST'])
 async def get_logs(request):
     # logs = await read_logs(ind)
     logs = await read_logs(0)
     return JsonResponse({"logs": logs})
 
 
+@api_view(['POST'])
 async def clear_temp_logs(request):
     smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
     imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
@@ -206,6 +219,7 @@ async def clear_temp_logs(request):
         return JsonResponse({"message": str(e)}, status=500)
 
 
+@api_view(['GET'])
 @require_GET
 def clear_full_logs(request):
     smtp_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'smtp.log')
@@ -221,39 +235,41 @@ def clear_full_logs(request):
         return JsonResponse({"message": str(e)}, status=500)
 
 
+@api_view(['POST'])
 def remove_duplicate_lines(file_path):
     try:
-        # Определяем тип файла
+        # Determine file type
         mime_type = mimetypes.guess_type(file_path)[0]
         if not mime_type or not mime_type.startswith("text"):
             raise ValueError("Invalid file type. Only text files are supported for removing duplicates.")
 
-        # Определяем кодировку файла
+        # Detect file encoding
         with open(file_path, 'rb') as f:
             raw_data = f.read()
             detection = chardet.detect(raw_data)
-            encoding = detection.get('encoding', 'utf-8')  # По умолчанию 'utf-8'
+            encoding = detection.get('encoding', 'utf-8')  # Default to 'utf-8'
 
             if encoding is None:
                 raise ValueError("Unable to detect file encoding")
 
-            # Читаем строки файла в указанной кодировке
+            # Read file lines with detected encoding
             lines = raw_data.decode(encoding).splitlines()
 
-        # Убираем дубликаты строк
+        # Remove duplicate lines
         unique_lines = list(set(lines))
 
-        # Перезаписываем файл уникальными строками в той же кодировке
+        # Rewrite file with unique lines using same encoding
         with open(file_path, 'w', encoding=encoding) as f:
             f.write('\n'.join(unique_lines))
 
-        # Возвращаем количество удалённых строк
+        # Return number of removed lines
         return len(lines) - len(unique_lines)
     except Exception as e:
         logging.error(f"Error removing duplicate lines: {e}")
         raise
 
 
+@api_view(['GET'])
 @require_GET
 def download_logs_file(request):
     directory = os.path.join(settings.BASE_DIR, 'data', 'full_logs')
@@ -274,6 +290,7 @@ def download_logs_file(request):
         os.remove(zip_filename)
 
 
+@api_view(['GET'])
 @require_GET
 def check_smtp_emails_route(request):
     loop = asyncio.new_event_loop()
@@ -291,7 +308,7 @@ def check_smtp_emails_route(request):
     finally:
         loop.close()
 
-# async def check_imap_emails(filename):
+
 #     imap_driver = ImapDriver()
 #     imap_results = []
 #
