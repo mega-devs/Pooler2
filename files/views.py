@@ -47,7 +47,10 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 @login_required(login_url='users:login')
 def panel_table(request):
-    """Display data with pagination or random selection."""
+    """Display data with pagination or random selection.
+    
+    Handles filtering by provider, email, and country.
+    Supports both random sampling and paginated full data display."""
 
     query_params = request.GET
     show_all = query_params.get('show_all') == 'true'
@@ -106,11 +109,14 @@ def panel_table(request):
     })
 
 
-# --- File Upload ---
+# --- Upload Combo File ---
 @api_view(['POST'])
 @require_POST
 def upload_combofile(request):
-    """Handles file upload and initiates async processing."""
+    """Handles file upload and initiates async processing.
+
+    Validates file presence and format, saves to appropriate directory.
+    Triggers background tasks for file processing and data extraction."""
 
     if 'file' not in request.FILES:
         return JsonResponse({'status': 404, 'error': 'No file part'})
@@ -152,7 +158,10 @@ def upload_combofile(request):
 # --- File Processing ---
 @api_view(['POST'])
 def process_file(file_path, file_name, uploaded_file):
-    """Extracts data from the unpacked file."""
+    """Extracts data from the unpacked file.
+    
+    Processes text files to extract email/password combinations and saves to database.
+    Handles duplicate removal and data validation."""
     try:
         # Check file format
         mime_type, _ = mimetypes.guess_type(file_path)
@@ -196,7 +205,10 @@ def process_file(file_path, file_name, uploaded_file):
 @api_view(['GET'])
 @require_GET
 def download_file(request, filename):
-    """Serves requested file for download."""
+    """Serves requested file for download.
+    
+    Takes a filename parameter and returns the file as a download attachment.
+    Raises 404 if file is not found in the combofiles directory."""
 
     directory = os.path.join(settings.BASE_DIR, "data", "combofiles")
     file_path = os.path.join(directory, filename)
@@ -207,11 +219,13 @@ def download_file(request, filename):
     return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
 
 
-# --- File Downloads ---
 @api_view(['GET'])
 @require_GET
 def download_combofile(request, filename):
-    """ Handles file downloads."""
+    """Handles file downloads.
+    
+    Takes a filename parameter and returns the file as a download attachment.
+    Raises 404 if file is not found in the combofiles directory."""
 
     directory = os.path.join(settings.BASE_DIR, 'data', 'combofiles')
     file_path = os.path.join(directory, filename)
@@ -220,24 +234,15 @@ def download_combofile(request, filename):
         raise Http404(f"File {filename} not found.")
     return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
 
-
-# --- File Downloads ---
-@api_view(['POST'])
-def download_combofile(request, filename):
-    directory = os.path.join(settings.BASE_DIR, "data", "combofiles")
-    file_path = os.path.join(directory, filename)
-
-    if not os.path.exists(file_path):
-        raise Http404(f"File {filename} not found.")
-
-    return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
-
-
-# --- File Management ---
 @api_view(['GET'])
 @login_required
 def uploaded_files_list(request):
-    """View list of uploaded files."""
+    """
+    Handles file downloads.
+    
+    Takes a filename parameter and returns the file as a download attachment.
+    Raises 404 if file is not found in the combofiles directory.
+    """
 
     user_files = UploadedFile.objects.filter(user=request.user)
     return render(request, 'uploaded_files_list.html', {'uploaded_files': user_files})
@@ -246,7 +251,12 @@ def uploaded_files_list(request):
 @api_view(['PUT'])
 @login_required
 def uploaded_file_update(request, pk):
-    """Update uploaded file information."""
+    """
+    Update uploaded file information.
+    
+    Allows users to modify metadata of their uploaded files.
+    Only accessible to authenticated users who own the file.
+    """
 
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
@@ -264,7 +274,12 @@ def uploaded_file_update(request, pk):
 @api_view(['DELETE'])
 @login_required
 def uploaded_file_delete(request, pk):
-    """Delete uploaded file along with database object and unpacked files."""
+    """
+    Delete uploaded file along with database object and unpacked files.
+
+    Handles deletion of the uploaded file, its database record, and any associated unpacked files.
+    Ensures proper cleanup of all related data and files from both database and filesystem.
+    """
 
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
@@ -324,7 +339,11 @@ def uploaded_file_delete(request, pk):
 @api_view(['GET', 'POST'])
 @login_required
 def download_txt(request):
-    """Download data displayed on the current page in TXT format."""
+    """
+    Download data displayed on the current page in TXT format.
+    Takes the currently filtered/displayed records from the session
+    and generates a downloadable TXT file with the data.
+    """
 
     current_data_ids = request.session.get('current_data_ids', [])
 
@@ -347,15 +366,18 @@ def download_txt(request):
             f"Upload Origin: {item.upload_origin}\n"
         )
         response.write(line)
-
+        
     return response
-
 
 
 @api_view(['GET', 'POST'])
 @login_required
 def extracted_data_update(request, pk):
-    """Edit extracted data"""
+    """
+    Edit extracted data.
+    Allows updating of existing extracted data records through a form.
+    Returns to panel table view after successful update.
+    """
 
     data_obj = get_object_or_404(ExtractedData, pk=pk)
 
@@ -373,7 +395,11 @@ def extracted_data_update(request, pk):
 @api_view(['GET', 'POST'])
 @login_required
 def extracted_data_delete(request, pk):
-    """Delete extracted data with confirmation"""
+    """
+    Delete extracted data with confirmation.
+    Handles both GET requests to show confirmation page and POST requests to perform deletion.
+    Removes both database record and associated file from the server.
+    """
     
     data_obj = get_object_or_404(ExtractedData, pk=pk)
 
@@ -405,19 +431,27 @@ def extracted_data_delete(request, pk):
     return render(request, 'extracted_data_confirm_delete.html', {'data': data_obj})
 
 
+# viewsets for models, Swagger
 class ExtractedDataModelViewSet(viewsets.ModelViewSet):
     queryset = ExtractedData.objects.all()
     serializer_class = ExtractedDataSerializer
 
     @swagger_auto_schema(
-        operation_description="Get list of items",
+        operation_description="""Get list of items.
+
+            This endpoint returns all extracted data items.
+            Use this to retrieve the complete collection of extracted data.
+            """,
         responses={200: ExtractedDataSerializer(many=True)}
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     @swagger_auto_schema(
-        operation_description="Create new item",
+        operation_description="""Create new item.
+
+            This endpoint allows creation of new extracted data items.
+            Provide the required data in the request body to create a new entry.""",
         request_body=ExtractedDataSerializer,
         responses={201: ExtractedDataSerializer()}
     )
@@ -430,16 +464,23 @@ class UploadedFileModelViewSet(viewsets.ModelViewSet):
     serializer_class = UploadedFileSerializer
 
     @swagger_auto_schema(
-        operation_description="Get list of items",
+        operation_description="""Get list of items.
+            
+            This endpoint returns all uploaded file items.
+            Use this to retrieve the complete collection of files.""",
         responses={200: UploadedFileSerializer(many=True)}
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     @swagger_auto_schema(
-        operation_description="Create new item",
+        operation_description="""Create new item.
+            
+            This endpoint allows creation of new uploaded file items.
+            Provide the required data in the request body to create a new entry.""",
         request_body=UploadedFileSerializer,
         responses={201: UploadedFileSerializer()}
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
+    

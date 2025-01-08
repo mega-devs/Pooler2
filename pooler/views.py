@@ -51,6 +51,12 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 @require_http_methods(["GET"])
 def redirect_to_panel(request):
+    """
+    Redirects user to the main panel view.
+    
+    This view function handles GET requests and redirects to the panel URL 
+    using Django's reverse_lazy function to avoid any circular import issues.
+    """
     return redirect(reverse_lazy('pooler:panel'))
 
 
@@ -58,6 +64,12 @@ def redirect_to_panel(request):
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel(request):
+    """
+    Main panel view that displays dashboard statistics for SMTP and IMAP data.
+    
+    Retrieves counts of valid/invalid SMTP and IMAP records from ExtractedData model.
+    Returns rendered dashboard template with statistics context data.
+    """
     queryset = ExtractedData.objects.all()
     smtp_valid_count = ExtractedData.objects.filter(smtp_is_valid=True).count()
     imap_valid_count = ExtractedData.objects.filter(imap_is_valid=True).count()
@@ -76,6 +88,12 @@ def panel(request):
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_table_placeholder(request):
+    """
+    Renders the tables view template with table data.
+    
+    This view function handles both GET and POST requests and requires user authentication.    
+    Returns rendered tables template with active page context set to 'tables'.
+    """
     return render(request, 'tables.html', {'active_page': "tables"})
 
 
@@ -83,12 +101,24 @@ def panel_table_placeholder(request):
 @login_required(login_url='users:login')
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
+    """
+    Renders the settings view template with settings data.
+    
+    This view function handles both GET and POST requests and requires user authentication.    
+    Returns rendered settings template with active page context set to 'settings'.
+    """
     return render(request, 'settings.html', {'active_page': "settings"})
 
 
 api_view(['POST'])
 @csrf_exempt
 def upload_file_by_url(request):
+    """
+    Handles file upload via URL endpoint.    
+
+    Downloads file from provided URL and saves it to appropriate directory based on country.
+    Returns JSON response with status and filename or error details.
+    """
     if request.method == 'POST':
         data = json.loads(request.body)
         file_url = data.get('url')
@@ -126,6 +156,12 @@ def upload_file_by_url(request):
 @api_view(['GET'])
 @require_GET
 async def check_smtp_view(request):
+    """
+    Async view to check SMTP emails from database.
+
+    Creates an event loop and runs the check_smtp_emails_from_db task.
+    Returns redirect to home on success or error response on failure.
+    """
     try:
         loop = asyncio.get_event_loop()
         await loop.create_task(check_smtp_emails_from_db())
@@ -137,16 +173,28 @@ async def check_smtp_view(request):
 @api_view(['GET'])
 @require_GET
 async def check_imap_view(request):
+    """
+    Async view to check IMAP emails from database.
+    
+    Creates an event loop and runs the check_imap_emails_from_db task.
+    Returns redirect to home on success or error response on failure.
+    """
     try:
         loop = asyncio.get_event_loop()
         await loop.create_task(check_imap_emails_from_db())
         return redirect('/')
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
+    
 
 @api_view(['GET'])
 async def parse_messages(client, channel):
+    """
+    Parses messages from a Telegram channel using the provided client.
+
+    Retrieves the last 10 messages and extracts sender, date, and text.
+    Returns a list of message dictionaries with formatted data.
+    """
     messages = []
     async for message in client.iter_messages(channel, limit=10):
         messages.append({
@@ -159,6 +207,12 @@ async def parse_messages(client, channel):
 
 @api_view(['GET'])
 async def read_existing_messages(filename):
+    """
+    Reads and parses messages from a JSON file.
+    
+    Returns the parsed messages as a list if the file exists and has content.
+    Returns an empty list if the file doesn't exist or is empty.
+    """
     if os.path.exists(filename):
         async with aiofiles.open(filename, 'r', encoding='utf-8') as f:
             content = await f.read()
@@ -168,12 +222,24 @@ async def read_existing_messages(filename):
 
 @api_view(['POST'])
 async def write_messages(filename, messages):
+    """
+    Writes messages to a JSON file asynchronously.
+    
+    Takes a filename and messages list as input parameters.
+    Saves the messages with proper UTF-8 encoding and indentation.
+    """
     async with aiofiles.open(filename, 'w', encoding='utf-8') as f:
         await f.write(json.dumps(messages, ensure_ascii=False, indent=4))
 
 
 @api_view(['GET'])
 async def read_logs(ind):
+    """
+    Reads SMTP and IMAP logs from temp log files.
+    
+    Creates empty log files if they don't exist.
+    Returns the last 100 lines of logs starting from the given index.
+    """
     smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
     imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
 
@@ -197,6 +263,12 @@ async def read_logs(ind):
 
 @api_view(['GET'])
 async def get_logs(request):
+    """
+    Reads SMTP and IMAP logs from temp log files.
+    
+    Returns logs starting from index 0.
+    Returns a JSON response containing the logs.
+    """
     # logs = await read_logs(ind)
     logs = await read_logs(0)
     return JsonResponse({"logs": logs})
@@ -204,6 +276,12 @@ async def get_logs(request):
 
 @api_view(['POST'])
 async def clear_temp_logs(request):
+    """
+    Clears the temporary SMTP and IMAP log files.
+    
+    Creates empty log files if they don't exist.
+    Returns a JSON response indicating success or failure.
+    """
     smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
     imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
 
@@ -217,11 +295,17 @@ async def clear_temp_logs(request):
         return JsonResponse({"message": "Logs cleared successfully"}, status=200)
     except Exception as e:
         return JsonResponse({"message": str(e)}, status=500)
-
+    
 
 @api_view(['GET'])
 @require_GET
 def clear_full_logs(request):
+    """
+    Clears the full SMTP and IMAP log files.
+    
+    Removes the log files from the filesystem if they exist.
+    Returns a JSON response indicating success or failure.
+    """
     smtp_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'smtp.log')
     imap_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'imap.log')
 
@@ -237,6 +321,12 @@ def clear_full_logs(request):
 
 @api_view(['POST'])
 def remove_duplicate_lines(file_path):
+    """
+    Removes duplicate lines from a text file while preserving the original encoding.
+
+    Uses MIME type detection to ensure only text files are processed.
+    Returns the number of duplicate lines that were removed.
+    """
     try:
         # Determine file type
         mime_type = mimetypes.guess_type(file_path)[0]
@@ -267,11 +357,17 @@ def remove_duplicate_lines(file_path):
     except Exception as e:
         logging.error(f"Error removing duplicate lines: {e}")
         raise
-
+    
 
 @api_view(['GET'])
 @require_GET
 def download_logs_file(request):
+    """
+    Downloads SMTP and IMAP log files as a zip archive.
+
+    Creates a temporary zip file containing the logs from the data/full_logs directory.
+    Returns a FileResponse with the zip file for download, then removes the temporary file.
+    """
     directory = os.path.join(settings.BASE_DIR, 'data', 'full_logs')
     files_to_zip = ["smtp.log", "imap.log"]
     zip_filename = os.path.join(settings.BASE_DIR, 'full_logs.zip')
@@ -288,11 +384,17 @@ def download_logs_file(request):
         return response
     finally:
         os.remove(zip_filename)
-
+        
 
 @api_view(['GET'])
 @require_GET
 def check_smtp_emails_route(request):
+    """
+    Checks SMTP emails from the database asynchronously.
+    
+    Returns a JSON response with the results of the SMTP checks.
+    Handles any errors and returns a 500 status code if an exception occurs.
+    """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -307,7 +409,7 @@ def check_smtp_emails_route(request):
         return JsonResponse({'error': str(e)}, status=500)
     finally:
         loop.close()
-
+        
 
 #     imap_driver = ImapDriver()
 #     imap_results = []

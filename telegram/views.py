@@ -23,6 +23,10 @@ api_hash = '7fa19eeed8c2e5d35036fafb9a716f18'
 @api_view(['POST'])
 @csrf_exempt
 async def telegram_add_channel(request):
+    """Adds a Telegram channel and processes its messages.
+
+    Takes a channel username/link in the request body and validates it.
+    Returns processed messages and saves them to a JSON file."""
     if request.method == 'POST':
         data = json.loads(request.body)
         channel = data.get('channel')
@@ -59,6 +63,10 @@ async def telegram_add_channel(request):
 
 @api_view(['GET'])
 async def download_files_from_tg(links):
+    """Downloads files from Telegram links.
+
+    Takes a list of Telegram message links as input.
+    Returns a list of downloaded file paths."""
     async with TelegramClient('session_name', api_id, api_hash) as client:
         files = []
         for link in links:
@@ -67,11 +75,15 @@ async def download_files_from_tg(links):
                 file_path = await message[0].download_media()
                 files.append(file_path)
         return files
-
+    
 
 @api_view(['GET'])
 @require_GET
 async def get_combofiles_from_tg(request):
+    """Downloads files from Telegram links stored in a text file.
+
+    Creates a zip archive containing all downloaded files.
+    Returns the zip file as a downloadable response."""
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
     try:
         with open(links_file_path, 'r') as file:
@@ -101,6 +113,10 @@ async def get_combofiles_from_tg(request):
 
 @api_view(['GET'])
 async def download_files_from_tg(links):
+    """Downloads files from Telegram links.
+
+    Takes a list of Telegram message links as input.
+    Returns a list of downloaded file paths."""
     async with TelegramClient('session_name', api_id, api_hash) as client:
         files = []
         for link in links:
@@ -114,6 +130,10 @@ async def download_files_from_tg(links):
 @api_view(['GET'])
 @require_GET
 async def get_from_tg(request):
+    """Downloads files from Telegram links stored in a text file.
+
+    Creates a zip archive containing all downloaded files.
+    Returns the zip file as a downloadable response."""
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
 
     try:
@@ -140,3 +160,4 @@ async def get_from_tg(request):
         os.remove(zip_filename)
         for file in files:
             os.remove(file)
+            
