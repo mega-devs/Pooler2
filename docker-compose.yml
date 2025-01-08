@@ -45,6 +45,8 @@ services:
     command: celery -A root worker --loglevel=info --concurrency=4
     volumes:
       - .:/app
+      - ./data/temp_logs:/app/data/temp_logs
+      - ./data/full_logs:/app/data/full_logs
     env_file:
       - .env
     depends_on:
