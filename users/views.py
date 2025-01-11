@@ -1,9 +1,18 @@
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
+from rest_framework.renderers import JSONRenderer
+
 from django.urls import reverse_lazy
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.views.generic import CreateView
 
-from users.serializers import UserSerializer
+from users.serializers import UserSigninSerializer, UserSignupSerializer
 from .forms import UserRegisterForm
 from .models import User
 from rest_framework.decorators import api_view
@@ -33,13 +42,13 @@ def custom_logout_view(request):
 # viewset for 'users' model, >Swagger documentation
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserSignupSerializer
 
     @swagger_auto_schema(
         operation_description="""Get list of items.
             This endpoint retrieves all user records from the database.
             Returns a paginated list of user objects.""",
-        responses={200: UserSerializer(many=True)}
+        responses={200: UserSignupSerializer(many=True)}
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -48,8 +57,59 @@ class UserViewSet(viewsets.ModelViewSet):
         operation_description="""Create new item.
             This endpoint creates a new user record in the database.
             Requires user data to be provided in the request body.""",
-        request_body=UserSerializer,
-        responses={201: UserSerializer()}
+        request_body=UserSignupSerializer,
+        responses={201: UserSignupSerializer()}
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
+    
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+@renderer_classes([JSONRenderer])
+def signup(request):
+    if request.method == 'GET':
+        return Response({
+            "message": "Welcome to signup endpoint",
+            "instructions": {
+                "method": "POST",
+                "required_fields": {
+                    "username": "string",
+                    "password": "string",
+                    "email": "string (optional)"
+                }
+            }
+        })
+    
+    elif request.method == 'POST':
+        serializer = UserSignupSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'user': serializer.data,
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@renderer_classes([JSONRenderer])
+def signin(request):
+    serializer = UserSigninSerializer(data=request.data)
+    if serializer.is_valid():
+        user = authenticate(
+            username=serializer.validated_data['username'],
+            password=serializer.validated_data['password']
+        )
+        if user:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            })
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
