@@ -39,35 +39,14 @@ def custom_logout_view(request):
     return redirect('/')
 
 
-# viewset for 'users' model, >Swagger documentation
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSignupSerializer
-
-    @swagger_auto_schema(
-        operation_description="""Get list of items.
-            This endpoint retrieves all user records from the database.
-            Returns a paginated list of user objects.""",
-        responses={200: UserSignupSerializer(many=True)}
-    )
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
-
-    @swagger_auto_schema(
-        operation_description="""Create new item.
-            This endpoint creates a new user record in the database.
-            Requires user data to be provided in the request body.""",
-        request_body=UserSignupSerializer,
-        responses={201: UserSignupSerializer()}
-    )
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-    
-
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 @renderer_classes([JSONRenderer])
 def signup(request):
+    """Handles user registration functionality.
+    Provides signup instructions on GET request.
+    Creates new user account and returns JWT tokens on POST request."""
+
     if request.method == 'GET':
         return Response({
             "message": "Welcome to signup endpoint",
@@ -94,11 +73,14 @@ def signup(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @renderer_classes([JSONRenderer])
 def signin(request):
+    """Signin user with username and password.    
+    Returns JWT refresh and access tokens on successful authentication.
+    Returns error message if credentials are invalid or request data is malformed."""
+
     serializer = UserSigninSerializer(data=request.data)
     if serializer.is_valid():
         user = authenticate(
@@ -113,3 +95,28 @@ def signin(request):
             })
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# viewset for 'users' model, >Swagger documentation
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSignupSerializer
+
+    @swagger_auto_schema(
+        operation_description="""Get list of items.
+            This endpoint retrieves all user records from the database.
+            Returns a paginated list of user objects.""",
+        responses={200: UserSignupSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        operation_description="""Create new item.
+            This endpoint creates a new user record in the database.
+            Requires user data to be provided in the request body.""",
+        request_body=UserSignupSerializer,
+        responses={201: UserSignupSerializer()}
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
