@@ -54,8 +54,7 @@ def signup(request):
                 "method": "POST",
                 "required_fields": {
                     "username": "string",
-                    "password": "string",
-                    "email": "string (optional)"
+                    "password": "string"
                 }
             }
         })
