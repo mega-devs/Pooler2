@@ -240,12 +240,16 @@ def remove_duplicate_lines(file_path):
         return 0
 
 
-def get_email_bd_data():
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(['GET'])
+def get_email_bd_data(request):
     emails_data = []
     data = ExtractedData.objects.all()
     for el in data:
         emails_data.append({'smtp_server': el.provider, 'email': el.email, 'password': el.password})
-    return emails_data
+    return Response(emails_data)
 
 
 # Function to validate an IMAP server

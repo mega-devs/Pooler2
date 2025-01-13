@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import io
 import json
 import logging
@@ -27,6 +28,8 @@ from .utils import (check_imap_emails_from_db, check_smtp_emails_from_db,
     extract_country_from_filename, get_email_bd_data)
 from files.models import ExtractedData
 import mimetypes
+from rest_framework.response import Response
+from rest_framework import status
 
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
@@ -76,33 +79,35 @@ def panel(request):
     return JsonResponse(data)
 
 
-@api_view(['GET', 'POST'])
-@login_required(login_url='users:login')
-@require_http_methods(["GET", "POST"])
+@api_view(['GET'])
+# @login_required(login_url='/users/login/')
+@require_http_methods(["GET"])
 def panel_table_placeholder(request):
     """
-    Renders the tables view template with table data.
+    Returns JSON response for table data.
     
-    This view function handles both GET and POST requests and requires user authentication.    
-    Returns rendered tables template with active page context set to 'tables'.
+    This view function handles GET requests and requires user authentication.    
+    Returns JSON response with active page context set to 'tables'.
     """
-    return render(request, 'tables.html', {'active_page': "tables"})
+    data = {'active_page': "tables"}
+    return JsonResponse(data)
 
 
 @api_view(['GET', 'POST'])
-@login_required(login_url='users:login')
+# @login_required(login_url='/users/login/')
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
     """
-    Renders the settings view template with settings data.
+    Returns JSON response for settings data.
     
     This view function handles both GET and POST requests and requires user authentication.    
-    Returns rendered settings template with active page context set to 'settings'.
+    Returns JSON response with active page context set to 'settings'.
     """
-    return render(request, 'settings.html', {'active_page': "settings"})
+    data = {'active_page': "settings"}
+    return JsonResponse(data)
 
 
-api_view(['POST'])
+@api_view(['POST'])
 @csrf_exempt
 def upload_file_by_url(request):
     """
@@ -112,13 +117,12 @@ def upload_file_by_url(request):
     Returns JSON response with status and filename or error details.
     """
     if request.method == 'POST':
-        data = json.loads(request.body)
-        file_url = data.get('url')
-
-        if not file_url:
-            return JsonResponse({'status': 404, 'error': 'No URL provided'}, status=404)
-
         try:
+            file_url = request.data.get('url')
+
+            if not file_url:
+                return Response({'status': 404, 'error': 'No URL provided'}, status=status.HTTP_400_BAD_REQUEST)
+
             response = requests.get(file_url)
             if response.status_code == 200:
                 filename = os.path.basename(file_url).replace(" ", "_")
@@ -135,52 +139,50 @@ def upload_file_by_url(request):
                 with open(filepath, 'wb') as file:
                     file.write(response.content)
 
-                return JsonResponse({'status': 200, 'filename': filename})
+                return Response({'status': 200, 'filename': filename}, status=status.HTTP_200_OK)
 
             else:
-                return JsonResponse({'status': 404, 'error': 'File not found'}, status=404)
+                return Response({'status': 404, 'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return JsonResponse({'status': 500, 'error': str(e)}, status=500)
+            return Response({'status': 500, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
-        return JsonResponse({'status': 405, 'error': 'Method not allowed'}, status=405)
+        return Response({'status': 405, 'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
 
 @api_view(['GET'])
 @require_GET
-async def check_smtp_view(request):
+def check_smtp_view(request):
     """
     Async view to check SMTP emails from database.
 
     Creates an event loop and runs the check_smtp_emails_from_db task.
-    Returns redirect to home on success or error response on failure.
+    Returns JSON response with status on success or error response on failure.
     """
     try:
-        loop = asyncio.get_event_loop()
-        await loop.create_task(check_smtp_emails_from_db())
-        return redirect('/')
+        asyncio.run(check_smtp_emails_from_db())
+        return JsonResponse({'status': 'success'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
 
 @api_view(['GET'])
 @require_GET
-async def check_imap_view(request):
+def check_imap_view(request):
     """
     Async view to check IMAP emails from database.
     
     Creates an event loop and runs the check_imap_emails_from_db task.
-    Returns redirect to home on success or error response on failure.
+    Returns JSON response with status on success or error response on failure.
     """
     try:
-        loop = asyncio.get_event_loop()
-        await loop.create_task(check_imap_emails_from_db())
-        return redirect('/')
+        asyncio.run(check_imap_emails_from_db())
+        return JsonResponse({'status': 'success'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
     
 
 @api_view(['GET'])
-async def parse_messages(client, channel):
+async def parse_messages(request, client, channel):
     """
     Parses messages from a Telegram channel using the provided client.
 
@@ -194,7 +196,7 @@ async def parse_messages(client, channel):
             'date': message.date.strftime('%Y-%m-%d %H:%M:%S'),
             'text': message.text
         })
-    return messages
+    return JsonResponse(messages, status=200, safe=False)
 
 
 @api_view(['GET'])
@@ -286,11 +288,10 @@ async def clear_temp_logs(request):
                 await imap_file.write('')
         return JsonResponse({"message": "Logs cleared successfully"}, status=200)
     except Exception as e:
-        return JsonResponse({"message": str(e)}, status=500)
-    
+        return JsonResponse({"message": str(e)}, status=500)  
+     
 
 @api_view(['GET'])
-@require_GET
 def clear_full_logs(request):
     """
     Clears the full SMTP and IMAP log files.
@@ -304,11 +305,11 @@ def clear_full_logs(request):
     try:
         os.remove(smtp_log_path)
         os.remove(imap_log_path)
-        return JsonResponse({"message": "Logs cleared successfully"}, status=200)
+        return Response({"message": "Logs cleared successfully"}, status=200)
     except FileNotFoundError:
-        return JsonResponse({"message": "Log files not found"}, status=404)
+        return Response({"message": "Log files not found"}, status=404)
     except Exception as e:
-        return JsonResponse({"message": str(e)}, status=500)
+        return Response({"message": str(e)}, status=500)
 
 
 @api_view(['POST'])
@@ -352,13 +353,12 @@ def remove_duplicate_lines(file_path):
     
 
 @api_view(['GET'])
-@require_GET
 def download_logs_file(request):
     """
     Downloads SMTP and IMAP log files as a zip archive.
 
     Creates a temporary zip file containing the logs from the data/full_logs directory.
-    Returns a FileResponse with the zip file for download, then removes the temporary file.
+    Returns a JSON response with the zip file as a base64 encoded string.
     """
     directory = os.path.join(settings.BASE_DIR, 'data', 'full_logs')
     files_to_zip = ["smtp.log", "imap.log"]
@@ -371,9 +371,11 @@ def download_logs_file(request):
                 zipf.write(file_path, os.path.basename(file_path))
 
     try:
-        response = FileResponse(open(zip_filename, 'rb'), as_attachment=True)
-        response['Content-Disposition'] = f'attachment; filename={os.path.basename(zip_filename)}'
-        return response
+        with open(zip_filename, 'rb') as f:
+            zip_data = base64.b64encode(f.read()).decode('utf-8')
+        return Response({"zip_file": zip_data, "filename": os.path.basename(zip_filename)}, status=200)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
     finally:
         os.remove(zip_filename)
         
