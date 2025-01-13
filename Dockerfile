@@ -10,11 +10,10 @@ RUN apt-get update \
     && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
     && apt-get clean
 
-# RUN useradd -m appuser && chown -R appuser:appuser /app
 RUN useradd -m appuser
 RUN mkdir -p /app/data/temp_logs /app/data/full_logs /app/uploads && \
     chown -R appuser:appuser /app && \
-    chmod -R 755 /app
+    chmod -R 777 /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
