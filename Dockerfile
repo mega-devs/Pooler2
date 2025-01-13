@@ -14,13 +14,14 @@ RUN useradd -m appuser
 RUN mkdir -p /app/data/temp_logs /app/data/full_logs /app/uploads && \
     chown -R appuser:appuser /app && \
     chmod -R 777 /app && \
-    chmod -R 777 /app/app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 RUN chown -R appuser:appuser /app
+
+RUN chmod -R 777 /app/app
 
 USER appuser
 
