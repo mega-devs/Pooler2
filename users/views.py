@@ -35,7 +35,7 @@ def custom_logout_view(request):
     """    
     request.session.flush()
     logout(request)
-    response = redirect('admin:login')  # or your desired redirect URL
+    response = redirect('admin:login')
     response.delete_cookie('sessionid')
     return response
 

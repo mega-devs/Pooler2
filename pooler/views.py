@@ -33,21 +33,6 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 logger = logging.getLogger(__name__)
 
 
-# @require_http_methods(['GET', 'POST'])
-# def login(request):
-#     if request.method == 'POST':
-#         username = request.POST['username']
-#         password = request.POST['password']
-#         user = authenticate(request, username=username, password=password)
-#         if user is not None:
-#             login(request, user)
-#             return redirect('panel') #redirect to panel
-#         else:
-#             return HttpResponse("Invalid credentials", status=401)
-#
-#     return render(request, "signin.html") #render login page
-
-
 @api_view(['GET'])
 @require_http_methods(["GET"])
 def redirect_to_panel(request):
@@ -57,20 +42,19 @@ def redirect_to_panel(request):
     This view function handles GET requests and redirects to the panel URL 
     using Django's reverse_lazy function to avoid any circular import issues.
     """
-    return redirect(reverse_lazy('pooler:panel'))
+    return JsonResponse({'redirect': reverse_lazy('pooler:panel')})
 
 
-@api_view(['GET', 'POST'])
-@login_required(login_url='users:login')
-@require_http_methods(["GET", "POST"])
+@api_view(['GET'])
+# @login_required(login_url='/users/login/')
+@require_http_methods(["GET"])
 def panel(request):
     """
     Main panel view that displays dashboard statistics for SMTP and IMAP data.
     
     Retrieves counts of valid/invalid SMTP and IMAP records from ExtractedData model.
-    Returns rendered dashboard template with statistics context data.
+    Returns JSON response with statistics context data.
     """
-    queryset = ExtractedData.objects.all()
     smtp_valid_count = ExtractedData.objects.filter(smtp_is_valid=True).count()
     imap_valid_count = ExtractedData.objects.filter(imap_is_valid=True).count()
     smtp_invalid_count = ExtractedData.objects.filter(smtp_is_valid=False).count()
@@ -78,10 +62,18 @@ def panel(request):
     smtp_checked = smtp_invalid_count + smtp_valid_count
     imap_checked = imap_invalid_count + imap_valid_count
     smtp_all_count = ExtractedData.objects.all().count()
-    return render(request, 'index.html', {'active_page': "dashboard", 'queryset': queryset, 'count_of_smtp_valid':
-        smtp_valid_count, 'count_of_smtp_invalid':smtp_invalid_count, 'count_of_smtp':smtp_all_count,
-                                          'count_imap_valid': imap_valid_count, 'count_imap_invalid':
-                                              imap_invalid_count, 'smtp_checked':smtp_checked, 'imap_checked':imap_checked})
+    
+    data = {
+        'active_page': "dashboard",
+        'count_of_smtp_valid': smtp_valid_count,
+        'count_of_smtp_invalid': smtp_invalid_count,
+        'count_of_smtp': smtp_all_count,
+        'count_imap_valid': imap_valid_count,
+        'count_imap_invalid': imap_invalid_count,
+        'smtp_checked': smtp_checked,
+        'imap_checked': imap_checked
+    }
+    return JsonResponse(data)
 
 
 @api_view(['GET', 'POST'])

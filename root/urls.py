@@ -48,8 +48,9 @@ urlpatterns = [
    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
    path('users/', include('users.urls')),
-   path('api/', include('files.urls')),
-   path('api/', include('telegram.urls')),
+   path('files/', include('files.urls')),
+   path('api/', include('pooler.urls')),
+   path('telegram/', include('telegram.urls')),
    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ] + router.urls

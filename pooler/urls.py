@@ -1,11 +1,9 @@
 # from lib2to3.fixes.fix_input import context
-
 from django.urls import path
 from . import views
 from .apps import PoolerConfig
 from root import settings
 from django.conf.urls.static import static
-from .views import redirect_to_panel
 
 app_name = PoolerConfig.name
 

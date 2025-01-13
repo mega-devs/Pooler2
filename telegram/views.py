@@ -14,6 +14,8 @@ from .utils import is_valid_telegram_username
 from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.response import Response
+from rest_framework import status
 
 
 api_id = '29719825'
@@ -32,7 +34,10 @@ async def telegram_add_channel(request):
         channel = data.get('channel')
 
         if not channel or not is_valid_telegram_username(channel):
-            return JsonResponse({'status': 400, 'error': 'Invalid Telegram link or username'}, status=400)
+            return Response(
+                {'status': 'error', 'message': 'Invalid Telegram link or username'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         sanitized_channel = re.sub(r'\W+', '_', channel)
 
@@ -54,27 +59,60 @@ async def telegram_add_channel(request):
         if unique_messages:
             combined_messages = existing_messages + unique_messages
             await write_messages(filename, combined_messages)
-            return JsonResponse({'status': 200, 'messages': unique_messages, 'file': filename})
+            return Response({
+                'status': 'success',
+                'messages': unique_messages,
+                'file': filename
+            }, status=status.HTTP_200_OK)
         else:
-            return JsonResponse({'status': 200, 'message': 'No new unique messages to save.'})
+            return Response({
+                'status': 'success',
+                'message': 'No new unique messages to save.'
+            }, status=status.HTTP_200_OK)
 
-    return JsonResponse({'status': 405, 'message': 'Invalid HTTP method'}, status=405)
+    return Response({
+        'status': 'error', 
+        'message': 'Invalid HTTP method'
+    }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-@api_view(['GET'])
-async def download_files_from_tg(links):
-    """Downloads files from Telegram links.
+from asgiref.sync import async_to_sync
+
+@api_view(['POST'])
+def download_files_from_tg(request):
+    """
+    Downloads files from Telegram links.
 
     Takes a list of Telegram message links as input.
-    Returns a list of downloaded file paths."""
-    async with TelegramClient('session_name', api_id, api_hash) as client:
-        files = []
-        for link in links:
-            message = await client.get_messages(link, limit=1)
-            if message and message[0].media:
-                file_path = await message[0].download_media()
-                files.append(file_path)
-        return files
+    Returns a JSON response with downloaded file paths.
+    """
+    links = request.data.get('links', [])
+    
+    if not isinstance(links, list):
+        return JsonResponse({'error': 'Invalid input. "links" must be a list.'}, status=400)
+
+    def sync_download():
+        async def download():
+            async with TelegramClient('session_name', api_id, api_hash) as client:
+                files = []
+                for link in links:
+                    try:
+                        message = await client.get_messages(link, limit=1)
+                        if message and message[0].media:
+                            file_path = await message[0].download_media()
+                            files.append(file_path)
+                    except Exception as e:
+                        return {'error': f"Failed to process link {link}. Error: {str(e)}"}
+                return {'files': files}
+
+        return async_to_sync(download)()
+
+    result = sync_download()
+    
+    if 'error' in result:
+        return JsonResponse(result, status=500)
+    
+    return JsonResponse(result)
     
 
 @api_view(['GET'])
@@ -86,15 +124,22 @@ async def get_combofiles_from_tg(request):
     Returns the zip file as a downloadable response."""
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
     try:
+        links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
         with open(links_file_path, 'r') as file:
             links = [link.strip() for link in file.readlines()]
     except FileNotFoundError:
-        raise Http404("Telegram links file not found.")
+        return Response({
+            'status': 'error',
+            'message': 'Telegram links file not found'
+        }, status=status.HTTP_404_NOT_FOUND)
 
     files = await download_files_from_tg(links)
 
     if not files:
-        return JsonResponse({"error": "No files found"}, status=404)
+        return Response({
+            'status': 'error',
+            'message': 'No files found'
+        }, status=status.HTTP_404_NOT_FOUND)
 
     zip_filename = os.path.join(settings.BASE_DIR, "tg.zip")
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
@@ -112,22 +157,6 @@ async def get_combofiles_from_tg(request):
 
 
 @api_view(['GET'])
-async def download_files_from_tg(links):
-    """Downloads files from Telegram links.
-
-    Takes a list of Telegram message links as input.
-    Returns a list of downloaded file paths."""
-    async with TelegramClient('session_name', api_id, api_hash) as client:
-        files = []
-        for link in links:
-            message = await client.get_messages(link, limit=1)
-            if message and message[0].media:
-                file_path = await message[0].download_media()
-                files.append(file_path)
-        return files
-
-
-@api_view(['GET'])
 @require_GET
 async def get_from_tg(request):
     """Downloads files from Telegram links stored in a text file.
@@ -137,15 +166,22 @@ async def get_from_tg(request):
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
 
     try:
+        links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
         with open(links_file_path, 'r') as file:
             links = [link.strip() for link in file.readlines()]
     except FileNotFoundError:
-        raise Http404("Telegram links file not found.")
+        return Response({
+            'status': 'error',
+            'message': 'Telegram links file not found'
+        }, status=status.HTTP_404_NOT_FOUND)
 
     files = await download_files_from_tg(links)
 
     if not files:
-        return JsonResponse({"error": "No files found"}, status=404)
+        return Response({
+            'status': 'error',
+            'message': 'No files found'
+        }, status=status.HTTP_404_NOT_FOUND)
 
     zip_filename = os.path.join(settings.BASE_DIR, "tg.zip")
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
