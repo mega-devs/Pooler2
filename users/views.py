@@ -1,22 +1,19 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import status, viewsets
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.renderers import JSONRenderer
 
 from django.urls import reverse_lazy
-from django.contrib.auth import logout
+from django.contrib.auth import authenticate
 from django.shortcuts import redirect
+from django.contrib.auth import logout
 from django.views.generic import CreateView
 
 from users.serializers import UserSigninSerializer, UserSignupSerializer
 from .forms import UserRegisterForm
 from .models import User
-from rest_framework.decorators import api_view
-from rest_framework import viewsets
 from drf_yasg.utils import swagger_auto_schema
 
 
@@ -28,16 +25,19 @@ class RegisterView(CreateView):
 
 
 @api_view(['POST'])
+@renderer_classes([JSONRenderer])
 def custom_logout_view(request):
     """
     Handles user logout functionality.
 
     Logs out the current user from the system.
-    Redirects to the home page after successful logout.
+    Returns success message after logout.
     """    
+    request.session.flush()
     logout(request)
-    return redirect('/')
-
+    response = redirect('admin:login')  # or your desired redirect URL
+    response.delete_cookie('sessionid')
+    return response
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
@@ -96,7 +96,6 @@ def signin(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# viewset for 'users' model, >Swagger documentation
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSignupSerializer
