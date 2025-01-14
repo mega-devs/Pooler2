@@ -14,10 +14,11 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
+from rest_framework.permissions import IsAuthenticated
 
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 
 import adrf.decorators as adrf
 
@@ -42,7 +43,7 @@ def redirect_to_panel(request):
 
 
 @api_view(['GET'])
-# @login_required(login_url='/users/login/')
+@permission_classes([IsAuthenticated])
 @require_http_methods(["GET"])
 def panel(request):
     """
@@ -73,7 +74,7 @@ def panel(request):
 
 
 @api_view(['GET'])
-# @login_required(login_url='/users/login/')
+@permission_classes([IsAuthenticated])
 @require_http_methods(["GET"])
 def panel_table_placeholder(request):
     """
@@ -87,7 +88,7 @@ def panel_table_placeholder(request):
 
 
 @api_view(['GET', 'POST'])
-# @login_required(login_url='/users/login/')
+@permission_classes([IsAuthenticated])
 @require_http_methods(["GET", "POST"])
 def panel_settings(request):
     """
