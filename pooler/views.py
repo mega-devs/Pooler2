@@ -1,35 +1,28 @@
 import asyncio
 import base64
-import io
 import json
 import logging
 import os
 import zipfile
-
-# third-party imports
 import aiofiles
 import chardet
 import requests
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.http import (FileResponse, Http404, HttpResponse, HttpResponseRedirect,
-        JsonResponse)
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse, reverse_lazy
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import (require_GET, require_http_methods,
-                         require_POST)
-from rest_framework.decorators import api_view
-
-# local imports
-from .pooler_logging import logger_temp_smtp
-from .utils import (check_imap_emails_from_db, check_smtp_emails_from_db,
-    check_smtp_imap_emails_from_zip, chunks,
-    extract_country_from_filename, get_email_bd_data)
-from files.models import ExtractedData
 import mimetypes
+
+from django.conf import settings
+from django.http import JsonResponse
+from django.urls import reverse_lazy
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_http_methods
+
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import api_view
+
+import adrf.decorators as adrf
+
+from .utils import check_imap_emails_from_db, check_smtp_emails_from_db, extract_country_from_filename
+from files.models import ExtractedData
 
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
@@ -226,7 +219,6 @@ async def write_messages(filename, messages):
         await f.write(json.dumps(messages, ensure_ascii=False, indent=4))
 
 
-@api_view(['GET'])
 async def read_logs(ind):
     """
     Reads SMTP and IMAP logs from temp log files.
@@ -252,10 +244,10 @@ async def read_logs(ind):
     smtp_logs = list(map(lambda line: line.strip(), smtp_lines))[ind:ind + 100]
     imap_logs = list(map(lambda line: line.strip(), imap_lines))[ind:ind + 100]
 
-    return JsonResponse({"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)})
+    return {"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)}
 
 
-@api_view(['GET'])
+@adrf.api_view(['GET'])
 async def get_logs(request):
     """
     Reads SMTP and IMAP logs from temp log files.
@@ -268,7 +260,7 @@ async def get_logs(request):
     return JsonResponse({"logs": logs})
 
 
-@api_view(['POST'])
+@adrf.api_view(['POST'])
 async def clear_temp_logs(request):
     """
     Clears the temporary SMTP and IMAP log files.
