@@ -1,21 +1,24 @@
 import json
 import os
 import re
-
 import zipfile
-from django.conf import settings
-from django.http import JsonResponse, FileResponse, Http404, HttpResponse, HttpResponseRedirect
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST, require_http_methods
-from telethon import TelegramClient
-from pooler.views import read_existing_messages, write_messages, parse_messages
-from .utils import is_valid_telegram_username
 
-from rest_framework.decorators import api_view
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from telethon import TelegramClient
+from asgiref.sync import async_to_sync
+
+from django.conf import settings
+from django.http import JsonResponse, FileResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
+
+import rest_framework.decorators as decorator
 from rest_framework.response import Response
 from rest_framework import status
+
+from adrf.decorators import api_view
+
+from pooler.views import read_existing_messages, write_messages, parse_messages
+from .utils import is_valid_telegram_username
 
 
 api_id = '29719825'
@@ -76,9 +79,7 @@ async def telegram_add_channel(request):
     }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-from asgiref.sync import async_to_sync
-
-@api_view(['POST'])
+@decorator.api_view(['POST'])
 def download_files_from_tg(request):
     """
     Downloads files from Telegram links.
@@ -113,7 +114,7 @@ def download_files_from_tg(request):
         return JsonResponse(result, status=500)
     
     return JsonResponse(result)
-    
+
 
 @api_view(['GET'])
 @require_GET
@@ -149,6 +150,7 @@ async def get_combofiles_from_tg(request):
     try:
         response = FileResponse(open(zip_filename, 'rb'), as_attachment=True)
         response['Content-Disposition'] = 'attachment; filename="tg.zip"'
+        print(response)
         return response
     finally:
         os.remove(zip_filename)
