@@ -1,8 +1,9 @@
+from django.http import JsonResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 
@@ -103,19 +104,25 @@ def signin(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
 @renderer_classes([JSONRenderer])
-def get_session(request):
-    """Get current user session information.
-    Returns session key and user details if session exists."""
-    
-    if not request.session.session_key:
-        return Response({'error': 'No active session'}, status=status.HTTP_404_NOT_FOUND)
+def get_session_by_token(request, token):
+    try:
+        # Decode the token
+        decoded_token = AccessToken(token)
+        user_id = decoded_token['user_id']
+        user = User.objects.get(id=user_id)
         
-    return Response({
-        'session_key': request.session.session_key,
-    })
-
+        # Create session if needed
+        if not request.session.session_key:
+            request.session.create()
+            
+        return JsonResponse({
+            'user_id': user.id,
+            'session_key': request.session.session_key,
+            'username': user.username
+        })
+    except Exception:
+        return JsonResponse({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
