@@ -265,3 +265,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# for Session Settings
+SESSION_COOKIE_AGE = 3600  # in seconds
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
