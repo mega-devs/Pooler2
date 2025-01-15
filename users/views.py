@@ -3,26 +3,16 @@ from rest_framework.decorators import api_view, permission_classes, renderer_cla
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 
-from django.urls import reverse_lazy
 from django.contrib.auth import authenticate
-from django.shortcuts import redirect
 from django.contrib.auth import logout
-from django.views.generic import CreateView
 
-from users.serializers import UserSigninSerializer, UserSignupSerializer
-from .forms import UserRegisterForm
-from .models import User
 from drf_yasg.utils import swagger_auto_schema
 
 
-class RegisterView(CreateView):
-    model = User
-    form_class = UserRegisterForm
-    template_name = 'users/register.html'
-    success_url = reverse_lazy('users:login')
+from users.serializers import UserSigninSerializer, UserSignupSerializer
+from .models import User
 
 
 @api_view(['POST'])

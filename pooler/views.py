@@ -1,28 +1,25 @@
 import asyncio
 import base64
-import json
 import logging
 import os
 import zipfile
 import aiofiles
-import chardet
 import requests
-import mimetypes
 
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
-from rest_framework.permissions import IsAuthenticated
 
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 
 import adrf.decorators as adrf
 
-from .utils import check_imap_emails_from_db, check_smtp_emails_from_db, extract_country_from_filename
+from .utils import check_imap_emails_from_db, check_smtp_emails_from_db, extract_country_from_filename, read_logs
 from files.models import ExtractedData
 
 
@@ -173,79 +170,6 @@ def check_imap_view(request):
         return JsonResponse({'status': 'success'}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    
-
-@api_view(['GET'])
-async def parse_messages(request, client, channel):
-    """
-    Parses messages from a Telegram channel using the provided client.
-
-    Retrieves the last 10 messages and extracts sender, date, and text.
-    Returns a list of message dictionaries with formatted data.
-    """
-    messages = []
-    async for message in client.iter_messages(channel, limit=10):
-        messages.append({
-            'sender': message.sender_id,
-            'date': message.date.strftime('%Y-%m-%d %H:%M:%S'),
-            'text': message.text
-        })
-    return JsonResponse(messages, status=200, safe=False)
-
-
-@api_view(['GET'])
-async def read_existing_messages(filename):
-    """
-    Reads and parses messages from a JSON file.
-    
-    Returns the parsed messages as a list if the file exists and has content.
-    Returns an empty list if the file doesn't exist or is empty.
-    """
-    if os.path.exists(filename):
-        async with aiofiles.open(filename, 'r', encoding='utf-8') as f:
-            content = await f.read()
-            return json.loads(content) if content else []
-    return []
-
-
-@api_view(['POST'])
-async def write_messages(filename, messages):
-    """
-    Writes messages to a JSON file asynchronously.
-    
-    Takes a filename and messages list as input parameters.
-    Saves the messages with proper UTF-8 encoding and indentation.
-    """
-    async with aiofiles.open(filename, 'w', encoding='utf-8') as f:
-        await f.write(json.dumps(messages, ensure_ascii=False, indent=4))
-
-
-async def read_logs(ind):
-    """
-    Reads SMTP and IMAP logs from temp log files.
-    
-    Creates empty log files if they don't exist.
-    Returns the last 100 lines of logs starting from the given index.
-    """
-    smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
-    imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
-
-    if not os.path.exists(smtp_log_path):
-        async with aiofiles.open(smtp_log_path, 'w') as smtp_file:
-            await smtp_file.write('')
-
-    if not os.path.exists(imap_log_path):
-        async with aiofiles.open(imap_log_path, 'w') as imap_file:
-            await imap_file.write('')
-
-    async with aiofiles.open(smtp_log_path, 'r') as smtp_file, aiofiles.open(imap_log_path, 'r') as imap_file:
-        smtp_lines = await smtp_file.readlines()
-        imap_lines = await imap_file.readlines()
-
-    smtp_logs = list(map(lambda line: line.strip(), smtp_lines))[ind:ind + 100]
-    imap_logs = list(map(lambda line: line.strip(), imap_lines))[ind:ind + 100]
-
-    return {"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)}
 
 
 @adrf.api_view(['GET'])
@@ -303,46 +227,6 @@ def clear_full_logs(request):
         return Response({"message": "Log files not found"}, status=404)
     except Exception as e:
         return Response({"message": str(e)}, status=500)
-
-
-@api_view(['POST'])
-def remove_duplicate_lines(file_path):
-    """
-    Removes duplicate lines from a text file while preserving the original encoding.
-
-    Uses MIME type detection to ensure only text files are processed.
-    Returns the number of duplicate lines that were removed.
-    """
-    try:
-        # Determine file type
-        mime_type = mimetypes.guess_type(file_path)[0]
-        if not mime_type or not mime_type.startswith("text"):
-            raise ValueError("Invalid file type. Only text files are supported for removing duplicates.")
-
-        # Detect file encoding
-        with open(file_path, 'rb') as f:
-            raw_data = f.read()
-            detection = chardet.detect(raw_data)
-            encoding = detection.get('encoding', 'utf-8')  # Default to 'utf-8'
-
-            if encoding is None:
-                raise ValueError("Unable to detect file encoding")
-
-            # Read file lines with detected encoding
-            lines = raw_data.decode(encoding).splitlines()
-
-        # Remove duplicate lines
-        unique_lines = list(set(lines))
-
-        # Rewrite file with unique lines using same encoding
-        with open(file_path, 'w', encoding=encoding) as f:
-            f.write('\n'.join(unique_lines))
-
-        # Return number of removed lines
-        return len(lines) - len(unique_lines)
-    except Exception as e:
-        logging.error(f"Error removing duplicate lines: {e}")
-        raise
     
 
 @api_view(['GET'])
@@ -371,31 +255,6 @@ def download_logs_file(request):
         return Response({"error": str(e)}, status=500)
     finally:
         os.remove(zip_filename)
-        
-
-@api_view(['GET'])
-@require_GET
-def check_smtp_emails_route(request):
-    """
-    Checks SMTP emails from the database asynchronously.
-    
-    Returns a JSON response with the results of the SMTP checks.
-    Handles any errors and returns a 500 status code if an exception occurs.
-    """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    try:
-        tasks = [
-            asyncio.ensure_future(check_smtp_emails_from_db())
-        ]
-        smtp_results = loop.run_until_complete(asyncio.gather(*tasks))
-        result = {'smtp_results': smtp_results}
-        return JsonResponse(result)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-    finally:
-        loop.close()
         
 
 #     imap_driver = ImapDriver()

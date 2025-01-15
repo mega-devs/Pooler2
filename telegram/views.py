@@ -17,8 +17,7 @@ from rest_framework import status
 
 from adrf.decorators import api_view
 
-from pooler.views import read_existing_messages, write_messages, parse_messages
-from .utils import is_valid_telegram_username
+from .utils import is_valid_telegram_username, parse_messages, read_existing_messages, write_messages
 
 
 api_id = '29719825'

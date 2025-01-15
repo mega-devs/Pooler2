@@ -1,4 +1,3 @@
-# from lib2to3.fixes.fix_input import context
 from django.urls import path
 from django.conf.urls.static import static
 
@@ -6,6 +5,7 @@ from .utils import get_email_bd_data
 from . import views
 from .apps import PoolerConfig
 from root import settings
+
 
 app_name = PoolerConfig.name
 
