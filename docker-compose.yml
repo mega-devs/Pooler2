@@ -52,3 +52,5 @@ services:
 
 volumes:
   postgres_data:
+  grafana_data:
+  prometheus_data:

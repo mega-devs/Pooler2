@@ -35,9 +35,10 @@ def custom_logout_view(request):
     """    
     request.session.flush()
     logout(request)
-    response = redirect('admin:login')
-    response.delete_cookie('sessionid')
-    return response
+    return Response({
+        'message': 'Successfully logged out'
+    }, status=status.HTTP_200_OK)
+
 
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
