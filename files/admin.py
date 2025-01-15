@@ -2,10 +2,13 @@ from django.contrib import admin
 from django.db.models import Count
 from django.contrib.auth import get_user_model
 
+from import_export.admin import ImportExportModelAdmin
+
 from files.resources import ExtractedDataResource, UploadedFileResource
 from .models import UploadedFile, ExtractedData
-from import_export.admin import ImportExportModelAdmin
+
 from users.admin import CustomUserAdmin
+
 
 User = get_user_model()
 
@@ -17,12 +20,14 @@ class UploadedFileAdmin(ImportExportModelAdmin):
     search_fields = ('filename', 'country', 'origin')
     ordering = ('-upload_date',)
 
+
 class ExtractedDataAdmin(ImportExportModelAdmin):
     resource_class = ExtractedDataResource
     list_display = ('filename', 'email', 'provider', 'country', 'uploaded_file', 'smtp_is_valid', 'imap_is_valid')
     list_filter = ('provider', 'country', 'smtp_is_valid', 'imap_is_valid')
     search_fields = ('email', 'provider', 'filename', 'uploaded_file__filename')
     ordering = ('-uploaded_file__upload_date',)
+
 
 class CustomAdminSite(admin.AdminSite):
     def index(self, request, extra_context=None):
@@ -54,6 +59,7 @@ class CustomAdminSite(admin.AdminSite):
         if extra_context:
             context.update(extra_context)
         return super().index(request, context)
+
 
 # Create the custom admin site instance
 admin_site = CustomAdminSite()

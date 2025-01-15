@@ -2,30 +2,29 @@ import logging
 import os
 import mimetypes
 import re
+from random import sample
 
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from django.http import JsonResponse, FileResponse, Http404, HttpResponseRedirect
-from django.shortcuts import redirect, render, get_object_or_404
-from django.urls import reverse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
+from django.http import HttpResponse
 
-from files.serializers import ExtractedDataSerializer, UploadedFileSerializer
+from .serializers import ExtractedDataSerializer, UploadedFileSerializer
 from .models import UploadedFile, ExtractedData
 from .forms import UploadedFileForm, ExtractedDataForm
 from .service import determine_origin
 from .tasks import async_handle_archive, async_process_uploaded_files
 from .service import remove_duplicate_lines, extract_country_from_filename
-from random import sample
-from django.http import HttpResponse
 
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
+
 from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 
 
 logger = logging.getLogger(__name__)
@@ -162,64 +161,6 @@ def upload_combofile(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@api_view(['POST'])
-def process_file(request, file_path, file_name, uploaded_file):
-    """Extracts data from the unpacked file.
-    
-    Processes text files to extract email/password combinations and saves to database.
-    Handles duplicate removal and data validation."""
-    try:
-        # Check file format
-        mime_type, _ = mimetypes.guess_type(file_path)
-        if mime_type != 'text/plain':
-            return JsonResponse({
-                'error': f"Unsupported file type: {mime_type}. Only text files are supported."
-            }, status=400)
-
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-            lines = f.readlines()
-
-        num_duplicates = remove_duplicate_lines(file_path)
-        logger.info(f"Removed {num_duplicates} duplicate lines from {file_name}")
-
-        upload_origin = determine_origin(file_name)
-        processed_count = 0
-
-        for line in lines:
-            match = re.match(r"([^@]+@[^:]+):(.+)", line.strip())
-            if match:
-                email, password = match.groups()
-                provider = email.split('@')[1].split('.')[0].upper()
-                country = extract_country_from_filename(file_name)
-
-                ExtractedData.objects.create(
-                    email=email,
-                    password=password,
-                    provider=provider,
-                    country=country,
-                    filename=file_name,
-                    uploaded_file=uploaded_file,
-                    upload_origin=upload_origin
-                )
-                processed_count += 1
-
-        return JsonResponse({
-            'message': f"Extracted data from {file_name} successfully saved.",
-            'processed_lines': processed_count,
-            'duplicates_removed': num_duplicates
-        }, status=200)
-
-    except ValueError as ve:
-        return JsonResponse({
-            'error': f"File processing error: {file_name}: {str(ve)}"
-        }, status=400)
-
-    except Exception as e:
-        return JsonResponse({
-            'error': f"Unexpected error processing file {file_name}: {str(e)}"
-        }, status=500)
-
-
 @api_view(['GET'])
 @require_GET
 def download_file(request, filename):
@@ -229,37 +170,6 @@ def download_file(request, filename):
     Raises 404 if file is not found in the combofiles directory."""
 
     directory = os.path.join(settings.BASE_DIR, "data", "combofiles")
-    file_path = os.path.join(directory, filename)
-
-    if not os.path.exists(file_path):
-        return JsonResponse({
-            'error': f"File {filename} not found."
-        }, status=404)
-
-    try:
-        with open(file_path, 'rb') as file:
-            response = HttpResponse(file.read(), content_type='application/octet-stream')
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            return JsonResponse({
-                'message': 'File downloaded successfully',
-                'filename': filename,
-                'download_url': response.url
-            }, status=200)
-    except Exception as e:
-        return JsonResponse({
-            'error': f"Error downloading file: {str(e)}"
-        }, status=500)
-
-
-@api_view(['GET'])
-@require_GET
-def download_combofile(request, filename):
-    """Handles file downloads.
-    
-    Takes a filename parameter and returns the file as a download attachment.
-    Raises 404 if file is not found in the combofiles directory."""
-
-    directory = os.path.join(settings.BASE_DIR, 'data', 'combofiles')
     file_path = os.path.join(directory, filename)
 
     if not os.path.exists(file_path):
@@ -467,7 +377,6 @@ def extracted_data_update(request, pk):
             'errors': form.errors
         }, status=400)
     else:
-        form = ExtractedDataForm(instance=data_obj)
         return JsonResponse({
             'status': 'success',
             'data': {
