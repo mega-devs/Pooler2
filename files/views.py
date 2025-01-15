@@ -43,7 +43,6 @@ logger = logging.getLogger(__name__)
 # )
 
 
-# --- Control Panel ---
 @api_view(['GET'])
 @login_required(login_url='users:login')
 def panel_table(request):
@@ -60,7 +59,7 @@ def panel_table(request):
     data = ExtractedData.objects.all()
 
     # Get unique countries
-    countries = ExtractedData.objects.values_list('country', flat=True).distinct()
+    countries = list(ExtractedData.objects.values_list('country', flat=True).distinct())
 
     # Apply filters
     provider_filter = query_params.get('provider')
@@ -80,33 +79,38 @@ def panel_table(request):
         random_count = min(random_count, total_count)
         random_ids = sample(list(data.values_list('id', flat=True)), random_count)
         data = data.filter(id__in=random_ids)
-        paginator = None
-        current_data_ids = list(data.values_list('id', flat=True))  # IDs of random records
+        data_serialized = ExtractedDataSerializer(data, many=True).data
+        response_data = {
+            'data': data_serialized,
+            'countries': countries,
+            'show_all': show_all,
+            'random_count': random_count,
+            'total_pages': 1
+        }
     else:
         # Enable pagination for "Show All"
         paginator = Paginator(data, 10)
         page = query_params.get('page', 1)
         try:
-            data = paginator.page(page)
+            page_obj = paginator.page(page)
         except PageNotAnInteger:
-            data = paginator.page(1)
+            page_obj = paginator.page(1)
         except EmptyPage:
-            data = paginator.page(paginator.num_pages)
+            page_obj = paginator.page(paginator.num_pages)
 
-        current_data_ids = list(data.object_list.values_list('id', flat=True))  # IDs of records on current page
+        data_serialized = ExtractedDataSerializer(page_obj.object_list, many=True).data
+        response_data = {
+            'data': data_serialized,
+            'countries': countries,
+            'show_all': show_all,
+            'random_count': random_count,
+            'current_page': page_obj.number,
+            'total_pages': paginator.num_pages,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous()
+        }
 
-    # Save current record IDs in session
-    request.session['current_data_ids'] = current_data_ids
-
-    return render(request, 'tables.html', {
-        'active_page': "tables",
-        'data': data,
-        'countries': countries,
-        'show_all': show_all,
-        'random_count': random_count,
-        'paginator': paginator,
-        'query_params': query_params,
-    })
+    return JsonResponse(response_data)
 
 
 # --- Upload Combo File ---
@@ -119,11 +123,11 @@ def upload_combofile(request):
     Triggers background tasks for file processing and data extraction."""
 
     if 'file' not in request.FILES:
-        return JsonResponse({'status': 404, 'error': 'No file part'})
+        return JsonResponse({'error': 'No file part'}, status=400)
 
     file = request.FILES['file']
     if not file.name:
-        return JsonResponse({'status': 404, 'error': 'No file selected'})
+        return JsonResponse({'error': 'No file selected'}, status=400)
 
     filename = file.name.replace(" ", "_")
     origin = determine_origin(filename)
@@ -148,16 +152,18 @@ def upload_combofile(request):
         async_handle_archive.delay(file_path, save_path)
         async_process_uploaded_files.delay(save_path, uploaded_file.id)
 
-        return HttpResponseRedirect(f"{reverse('pooler:panel')}?success=File '{filename}' uploaded successfully!")
+        return JsonResponse({
+            'message': f"File '{filename}' uploaded successfully!",
+            'file_id': uploaded_file.id
+        }, status=201)
 
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
-        return JsonResponse({'status': 500, 'error': str(e)})
+        return JsonResponse({'error': str(e)}, status=500)
 
 
-# --- File Processing ---
 @api_view(['POST'])
-def process_file(file_path, file_name, uploaded_file):
+def process_file(request, file_path, file_name, uploaded_file):
     """Extracts data from the unpacked file.
     
     Processes text files to extract email/password combinations and saves to database.
@@ -166,7 +172,9 @@ def process_file(file_path, file_name, uploaded_file):
         # Check file format
         mime_type, _ = mimetypes.guess_type(file_path)
         if mime_type != 'text/plain':
-            raise ValueError(f"Unsupported file type: {mime_type}. Only text files are supported.")
+            return JsonResponse({
+                'error': f"Unsupported file type: {mime_type}. Only text files are supported."
+            }, status=400)
 
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
@@ -175,6 +183,7 @@ def process_file(file_path, file_name, uploaded_file):
         logger.info(f"Removed {num_duplicates} duplicate lines from {file_name}")
 
         upload_origin = determine_origin(file_name)
+        processed_count = 0
 
         for line in lines:
             match = re.match(r"([^@]+@[^:]+):(.+)", line.strip())
@@ -192,14 +201,23 @@ def process_file(file_path, file_name, uploaded_file):
                     uploaded_file=uploaded_file,
                     upload_origin=upload_origin
                 )
+                processed_count += 1
 
-        logger.info(f"Extracted data from {file_name} successfully saved.")
+        return JsonResponse({
+            'message': f"Extracted data from {file_name} successfully saved.",
+            'processed_lines': processed_count,
+            'duplicates_removed': num_duplicates
+        }, status=200)
 
     except ValueError as ve:
-        logger.error(f"File processing error: {file_name}: {ve}")
+        return JsonResponse({
+            'error': f"File processing error: {file_name}: {str(ve)}"
+        }, status=400)
 
     except Exception as e:
-        logger.error(f"Unexpected error processing file {file_name}: {e}")
+        return JsonResponse({
+            'error': f"Unexpected error processing file {file_name}: {str(e)}"
+        }, status=500)
 
 
 @api_view(['GET'])
@@ -214,9 +232,23 @@ def download_file(request, filename):
     file_path = os.path.join(directory, filename)
 
     if not os.path.exists(file_path):
-        raise Http404(f"File {filename} not found.")
+        return JsonResponse({
+            'error': f"File {filename} not found."
+        }, status=404)
 
-    return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
+    try:
+        with open(file_path, 'rb') as file:
+            response = HttpResponse(file.read(), content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return JsonResponse({
+                'message': 'File downloaded successfully',
+                'filename': filename,
+                'download_url': response.url
+            }, status=200)
+    except Exception as e:
+        return JsonResponse({
+            'error': f"Error downloading file: {str(e)}"
+        }, status=500)
 
 
 @api_view(['GET'])
@@ -231,8 +263,24 @@ def download_combofile(request, filename):
     file_path = os.path.join(directory, filename)
 
     if not os.path.exists(file_path):
-        raise Http404(f"File {filename} not found.")
-    return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=filename)
+        return JsonResponse({
+            'error': f"File {filename} not found."
+        }, status=404)
+
+    try:
+        with open(file_path, 'rb') as file:
+            response = HttpResponse(file.read(), content_type='application/octet-stream')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return JsonResponse({
+                'message': 'File downloaded successfully',
+                'filename': filename,
+                'download_url': response.url
+            }, status=200)
+    except Exception as e:
+        return JsonResponse({
+            'error': f"Error downloading file: {str(e)}"
+        }, status=500)
+    
 
 @api_view(['GET'])
 @login_required
@@ -245,7 +293,18 @@ def uploaded_files_list(request):
     """
 
     user_files = UploadedFile.objects.filter(user=request.user)
-    return render(request, 'uploaded_files_list.html', {'uploaded_files': user_files})
+    files_data = [{
+        'id': file.id,
+        'filename': file.filename,
+        'file_path': file.file_path,
+        'upload_date': file.upload_date,
+        'status': file.status
+    } for file in user_files]
+    
+    return JsonResponse({
+        'message': 'Files retrieved successfully',
+        'files': files_data
+    }, status=200)
 
 
 @api_view(['PUT'])
@@ -260,15 +319,27 @@ def uploaded_file_update(request, pk):
 
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
-    if request.method == 'POST':
-        form = UploadedFileForm(request.POST, instance=file_obj)
+    if request.method == 'PUT':
+        form = UploadedFileForm(request.data, instance=file_obj)
         if form.is_valid():
-            form.save()
-            return redirect(reverse('files:uploaded_files_list'))
-    else:
-        form = UploadedFileForm(instance=file_obj)
+            updated_file = form.save()
+            return JsonResponse({
+                'message': 'File updated successfully',
+                'file': {
+                    'id': updated_file.id,
+                    'filename': updated_file.filename,
+                    'file_path': updated_file.file_path,
+                    'upload_date': updated_file.upload_date,
+                    'status': updated_file.status
+                }
+            }, status=200)
+        return JsonResponse({
+            'errors': form.errors
+        }, status=400)
 
-    return render(request, 'uploaded_files_form.html', {'form': form, 'file': file_obj})
+    return JsonResponse({
+        'error': 'Method not allowed'
+    }, status=405)
 
 
 @api_view(['DELETE'])
@@ -283,7 +354,7 @@ def uploaded_file_delete(request, pk):
 
     file_obj = get_object_or_404(UploadedFile, pk=pk, user=request.user)
 
-    if request.method == 'POST':
+    if request.method == 'DELETE':
         file_path = file_obj.file_path
         extracted_path = os.path.splitext(file_path)[0]  # Предполагаем, что распакованные файлы находятся в папке с таким же именем
 
@@ -316,26 +387,27 @@ def uploaded_file_delete(request, pk):
                 file_obj.delete()
                 logger.info(f"Object {file_obj.filename} deleted from database.")
 
-                return redirect('files:uploaded_files_list')
+                return JsonResponse({
+                    'message': 'File and associated data deleted successfully'
+                }, status=200)
 
         except IntegrityError as e:
             logger.error(f"Error deleting object: {e}")
-            return render(request, 'uploaded_file_confirm_delete.html', {
-                'file': file_obj,
-                'error': f"Error deleting object: {e}"
-            })
+            return JsonResponse({
+                'error': f"Error deleting object: {str(e)}"
+            }, status=500)
 
         except Exception as e:
             logger.error(f"Error deleting file {file_path} or folder {extracted_path}: {e}")
-            return render(request, 'uploaded_file_confirm_delete.html', {
-                'file': file_obj,
-                'error': f"Error deleting file or folder: {e}"
-            })
+            return JsonResponse({
+                'error': f"Error deleting file or folder: {str(e)}"
+            }, status=500)
 
-    return render(request, 'uploaded_file_confirm_delete.html', {'file': file_obj})
+    return JsonResponse({
+        'error': 'Method not allowed'
+    }, status=405)
 
 
-### Working with uploaded and unpacked data
 @api_view(['GET', 'POST'])
 @login_required
 def download_txt(request):
@@ -350,24 +422,25 @@ def download_txt(request):
     # Get records visible on the page
     data = ExtractedData.objects.filter(id__in=current_data_ids)
 
-    # Create TXT file
-    response = HttpResponse(content_type='text/plain')
-    response['Content-Disposition'] = 'attachment; filename="extracted_data.txt"'
-
     # Generate file content
+    content = []
     for item in data:
-        line = (
-            f"Line: {item.line_number} | "
-            f"Filename: {item.filename} | "
-            f"Email: {item.email} | "
-            f"Password: {item.password} | "
-            f"Provider: {item.provider} | "
-            f"Country: {item.country} | "
-            f"Upload Origin: {item.upload_origin}\n"
-        )
-        response.write(line)
+        line = {
+            "line_number": item.line_number,
+            "filename": item.filename,
+            "email": item.email,
+            "password": item.password,
+            "provider": item.provider,
+            "country": item.country,
+            "upload_origin": item.upload_origin
+        }
+        content.append(line)
         
-    return response
+    return JsonResponse({
+        'status': 'success',
+        'data': content,
+        'message': 'Data retrieved successfully'
+    }, status=200)
 
 
 @api_view(['GET', 'POST'])
@@ -376,7 +449,7 @@ def extracted_data_update(request, pk):
     """
     Edit extracted data.
     Allows updating of existing extracted data records through a form.
-    Returns to panel table view after successful update.
+    Returns JSON response after update attempt.
     """
 
     data_obj = get_object_or_404(ExtractedData, pk=pk)
@@ -385,11 +458,29 @@ def extracted_data_update(request, pk):
         form = ExtractedDataForm(request.POST, instance=data_obj)
         if form.is_valid():
             form.save()
-            return redirect('files:panel_table')
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Data updated successfully'
+            }, status=200)
+        return JsonResponse({
+            'status': 'error',
+            'errors': form.errors
+        }, status=400)
     else:
         form = ExtractedDataForm(instance=data_obj)
-
-    return render(request, 'extracted_data_form.html', {'form': form, 'data': data_obj})
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'id': data_obj.pk,
+                'email': data_obj.email,
+                'password': data_obj.password,
+                'provider': data_obj.provider,
+                'country': data_obj.country,
+                'filename': data_obj.filename,
+                'line_number': data_obj.line_number,
+                'upload_origin': data_obj.upload_origin
+            }
+        }, status=200)
 
 
 @api_view(['GET', 'POST'])
@@ -418,17 +509,28 @@ def extracted_data_delete(request, pk):
                 # Delete record from database
                 data_obj.delete()
                 logger.info(f"Object {data_obj.email} deleted from database.")
-                return redirect('files:panel_table')
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Data deleted successfully'
+                }, status=200)
 
         except Exception as e:
             logger.error(f"Error while deleting {data_obj.email}: {e}")
-            return render(request, 'extracted_data_confirm_delete.html', {
-                'data': data_obj,
-                'error': f"Error deleting object: {e}"
-            })
+            return JsonResponse({
+                'status': 'error',
+                'message': f"Error deleting object: {e}"
+            }, status=500)
 
-    # Display delete confirmation page on GET request
-    return render(request, 'extracted_data_confirm_delete.html', {'data': data_obj})
+    # Return data object details on GET request
+    return JsonResponse({
+        'status': 'success',
+        'data': {
+            'id': data_obj.pk,
+            'email': data_obj.email,
+            'filename': data_obj.filename
+        },
+        'message': 'Confirm deletion of this item'
+    }, status=200)
 
 
 # viewsets for models, Swagger

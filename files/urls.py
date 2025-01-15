@@ -1,10 +1,10 @@
 from django.urls import path
-
 from .apps import FilesConfig
 from .views import (
     uploaded_files_list, uploaded_file_update, uploaded_file_delete,
     upload_combofile, download_file, panel_table, download_txt, extracted_data_update, extracted_data_delete
 )
+
 app_name = FilesConfig.name
 
 urlpatterns = [
