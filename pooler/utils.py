@@ -1,36 +1,22 @@
-import aiohttp
-from aiohttp_socks import ProxyConnector
-import asyncio
-import hashlib
+import aiofiles
 import imaplib
 import io
-import json
 import os
-import random
+import re
+import smtplib
 import zipfile
-import string
-import psutil
-import ssl
-import time
-import pytz
-from datetime import datetime, timedelta
-from django.db import IntegrityError
-# from .models import EmailCheck
-import aiofiles
-import aioimaplib
-import aiosmtplib
-from root.celery import app
+from asyncio import gather
+from datetime import datetime
+
+import dns.resolver
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from validate_email_address import validate_email
 
 from files.models import ExtractedData
-from asyncio import gather
-import re
-import smtplib
-
-import dns.resolver
-
 from files.service import logger
 from root import settings
+from root.celery import app
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'root.settings')
 
@@ -192,56 +178,12 @@ def chunks(lst, n):
 #             except IntegrityError:
 #                 pass  # Ignore if email already exists in the database
 #             return {'status': 'error', 'error': str(e)}
-
-
-# Function to check if a datetime object is recent
-def is_recent(self, last_active: datetime) -> bool:
-    if last_active is None:
-        return False
-    return last_active > (datetime.now() - timedelta(hours=1))
-
-
-# Function to compute the MD5 hash of a string
-def md5(plaintext: str):
-    return hashlib.md5(plaintext.encode('utf-8')).hexdigest()
-
-
-# Function to generate a random string of a given length
-def gen_rand_string(n: int):
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(n))
-
-
 def extract_country_from_filename(filename):
     match = re.search(r'(?<=_)([A-Z]{2})(?=[_\W])', filename)
     if match:
         return match.group(1)
     return None
 
-
-def remove_duplicate_lines(file_path):
-    print(f"Removing duplicates from file: {file_path}")
-    try:
-        with open(file_path, 'r', errors='ignore') as file:
-            lines = file.readlines()
-
-        unique_lines = set(lines)
-        num_duplicates = len(lines) - len(unique_lines)
-
-        with open(file_path, 'w', errors='ignore') as file:
-            file.writelines(unique_lines)
-
-        if num_duplicates > 0:
-            base_name, extension = os.path.splitext(file_path)
-            new_file_path = f"{base_name}_{len(unique_lines)}{extension}"
-            os.rename(file_path, new_file_path)
-        return num_duplicates
-    except Exception as e:
-        print(f"Error processing file {file_path}: {e}")
-        return 0
-
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 
 @api_view(['GET'])
 def get_email_bd_data(request):
@@ -253,13 +195,13 @@ def get_email_bd_data(request):
 
 
 # Function to validate an IMAP server
-def imapCheck(email, password, imapServerName, port):
+def imapCheck(email, password, imapServerName):
     try:
         M = imaplib.IMAP4_SSL(imapServerName)
         M.login(email, password)
         return True
     except Exception as e:
-        logger.debug('e')
+        logger.debug(e)
         return False
 
 
@@ -296,7 +238,7 @@ async def process_chunk_from_file(chunk, results):
                                 if code == 250:
                                     smtp_status = 'valid'
                             elif server[0:4] == 'imap':
-                                check_result = imapCheck(email, password, server, port)
+                                check_result = imapCheck(email, password, server)
                                 if check_result:
                                     imap_status = 'valid'
                                 else:
@@ -396,7 +338,7 @@ async def imap_process_chunk_from_db(chunk, imap_results):
                 mx_record = str(mx_record)
                 if mx_record is not None:
                     try:
-                        imap_check_result = imapCheck(email, password, imap_server, 993)
+                        imap_check_result = imapCheck(email, password, imap_server)
                         if imap_check_result:
                             imap_status = 'valid'
                         else:
@@ -481,4 +423,30 @@ async def check_imap_emails_from_db():
     for el in imap_results:
         ExtractedData.objects.filter(email=el['email']).update(imap_is_valid=el['status'])
 
-# For fetch
+
+async def read_logs(ind):
+    """
+    Reads SMTP and IMAP logs from temp log files.
+
+    Creates empty log files if they don't exist.
+    Returns the last 100 lines of logs starting from the given index.
+    """
+    smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
+    imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
+
+    if not os.path.exists(smtp_log_path):
+        async with aiofiles.open(smtp_log_path, 'w') as smtp_file:
+            await smtp_file.write('')
+
+    if not os.path.exists(imap_log_path):
+        async with aiofiles.open(imap_log_path, 'w') as imap_file:
+            await imap_file.write('')
+
+    async with aiofiles.open(smtp_log_path, 'r') as smtp_file, aiofiles.open(imap_log_path, 'r') as imap_file:
+        smtp_lines = await smtp_file.readlines()
+        imap_lines = await imap_file.readlines()
+
+    smtp_logs = list(map(lambda line: line.strip(), smtp_lines))[ind:ind + 100]
+    imap_logs = list(map(lambda line: line.strip(), imap_lines))[ind:ind + 100]
+
+    return {"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)}
