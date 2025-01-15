@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, renderer_cla
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.renderers import JSONRenderer
 
 from django.urls import reverse_lazy
@@ -88,13 +89,32 @@ def signin(request):
             password=serializer.validated_data['password']
         )
         if user:
+            if not request.session.session_key:
+                request.session.create()
             refresh = RefreshToken.for_user(user)
             return Response({
+                'user_id': user.id,
+                'session_key': request.session.session_key,
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
             })
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@renderer_classes([JSONRenderer])
+def get_session(request):
+    """Get current user session information.
+    Returns session key and user details if session exists."""
+    
+    if not request.session.session_key:
+        return Response({'error': 'No active session'}, status=status.HTTP_404_NOT_FOUND)
+        
+    return Response({
+        'session_key': request.session.session_key,
+    })
 
 
 class UserViewSet(viewsets.ModelViewSet):
