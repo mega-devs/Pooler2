@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:13-alpine
+    image: postgres:latest
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -13,7 +13,6 @@ services:
     networks:
       - backend
     command: -c 'max_connections=5000'
-
   web:
     build:
       context: .
