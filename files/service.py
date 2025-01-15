@@ -2,13 +2,14 @@ import os
 import zipfile
 import re
 import logging
-from .models import ExtractedData
-
 import chardet
 import mimetypes
 
+from .models import ExtractedData
+
 
 logger = logging.getLogger(__name__)
+
 
 def extract_country_from_filename(filename):
     match = re.search(r'(?<=_)([A-Z]{2})(?=[_\W])', filename)
@@ -50,7 +51,7 @@ def remove_duplicate_lines(file_path):
         raise
 
 
-def handle_archive(file_path, save_path):
+def handle_archive(file_path):
     try:
         with zipfile.ZipFile(file_path, 'r') as archive:
             extracted_folder = os.path.splitext(file_path)[0]  # Папка для распакованных файлов
