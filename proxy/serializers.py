@@ -6,4 +6,5 @@ from .models import Proxy
 class ProxySerizalizer(ModelSerializer):
     class Meta:
         model = Proxy
-        fields = '__all__'
+        fields = ('host', 'port', 'is_active', 'country', 'country_code', 'anonymity', 'timeout')
+        read_only_fields = ('is_active', 'country', 'country_code', 'anonymity', 'timeout')

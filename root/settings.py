@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     'pooler.apps.PoolerConfig',
     'users.apps.UsersConfig',
     'files.apps.FilesConfig',
-    'proxy',
+    'proxy.apps.ProxyConfig',
     'telegram.apps.TelegramConfig',
     'rest_framework',
     'rest_framework_simplejwt',
