@@ -185,13 +185,12 @@ def extract_country_from_filename(filename):
     return None
 
 
-@api_view(['GET'])
-def get_email_bd_data(request):
+def get_email_bd_data():
     emails_data = []
     data = ExtractedData.objects.all()
     for el in data:
         emails_data.append({'smtp_server': el.provider, 'email': el.email, 'password': el.password})
-    return Response(emails_data)
+    return emails_data
 
 
 # Function to validate an IMAP server
