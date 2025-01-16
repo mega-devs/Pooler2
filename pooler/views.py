@@ -181,6 +181,7 @@ async def get_logs(request):
     Returns a JSON response containing the logs.
     """
     # logs = await read_logs(ind)
+
     logs = await read_logs(0)
     return JsonResponse({"logs": logs})
 
@@ -191,8 +192,8 @@ async def clear_temp_logs(request):
     Clears the temporary SMTP and IMAP log files.
     
     Creates empty log files if they don't exist.
-    Returns a JSON response indicating success or failure.
-    """
+    Returns a JSON response indicating success or failure."""
+
     smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
     imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
 
@@ -214,8 +215,8 @@ def clear_full_logs(request):
     Clears the full SMTP and IMAP log files.
     
     Removes the log files from the filesystem if they exist.
-    Returns a JSON response indicating success or failure.
-    """
+    Returns a JSON response indicating success or failure."""
+
     smtp_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'smtp.log')
     imap_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'imap.log')
 
@@ -235,8 +236,8 @@ def download_logs_file(request):
     Downloads SMTP and IMAP log files as JSON.
 
     Reads the logs from the data/full_logs directory and returns them in JSON format.
-    Returns a JSON response containing the contents of both log files.
-    """
+    Returns a JSON response containing the contents of both log files."""
+
     directory = os.path.join(settings.BASE_DIR, 'data', 'full_logs')
     log_files = {"smtp": "smtp.log", "imap": "imap.log"}
     logs_data = {}
@@ -250,7 +251,7 @@ def download_logs_file(request):
             logs_data[log_type] = []
 
     return Response(logs_data, status=200)
-        
+
 
 #     imap_driver = ImapDriver()
 #     imap_results = []
