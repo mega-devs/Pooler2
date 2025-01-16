@@ -232,29 +232,24 @@ def clear_full_logs(request):
 @api_view(['GET'])
 def download_logs_file(request):
     """
-    Downloads SMTP and IMAP log files as a zip archive.
+    Downloads SMTP and IMAP log files as JSON.
 
-    Creates a temporary zip file containing the logs from the data/full_logs directory.
-    Returns a JSON response with the zip file as a base64 encoded string.
+    Reads the logs from the data/full_logs directory and returns them in JSON format.
+    Returns a JSON response containing the contents of both log files.
     """
     directory = os.path.join(settings.BASE_DIR, 'data', 'full_logs')
-    files_to_zip = ["smtp.log", "imap.log"]
-    zip_filename = os.path.join(settings.BASE_DIR, 'full_logs.zip')
+    log_files = {"smtp": "smtp.log", "imap": "imap.log"}
+    logs_data = {}
 
-    with zipfile.ZipFile(zip_filename, 'w') as zipf:
-        for file in files_to_zip:
-            file_path = os.path.join(directory, file)
-            if os.path.exists(file_path):
-                zipf.write(file_path, os.path.basename(file_path))
+    for log_type, filename in log_files.items():
+        file_path = os.path.join(directory, filename)
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                logs_data[log_type] = f.read().splitlines()
+        else:
+            logs_data[log_type] = []
 
-    try:
-        with open(zip_filename, 'rb') as f:
-            zip_data = base64.b64encode(f.read()).decode('utf-8')
-        return Response({"zip_file": zip_data, "filename": os.path.basename(zip_filename)}, status=200)
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)
-    finally:
-        os.remove(zip_filename)
+    return Response(logs_data, status=200)
         
 
 #     imap_driver = ImapDriver()
