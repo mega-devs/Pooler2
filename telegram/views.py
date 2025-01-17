@@ -23,6 +23,19 @@ from .utils import is_valid_telegram_username, parse_messages, read_existing_mes
 api_id = '29719825'
 api_hash = '7fa19eeed8c2e5d35036fafb9a716f18'
 
+ALLOWED_EXTENSIONS = [
+    '.txt', '.md', '.rtf', '.csv', '.log',
+    '.py', '.js', '.html', '.css', '.java',
+    '.c', '.cpp', '.json', '.xml', '.yaml',
+    '.ini', '.sh', '.bat',
+    '.zip', '.rar', '.7z', '.tar', '.gz',
+    '.bz2', '.xz',
+    '.docx', '.xlsx', '.pptx'
+]
+
+MAX_SIZE_MB = 300
+MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
+
 
 @api_view(['POST'])
 @csrf_exempt
@@ -99,8 +112,17 @@ def download_files_from_tg(request):
                     try:
                         message = await client.get_messages(link, limit=1)
                         if message and message[0].media:
-                            file_path = await message[0].download_media()
-                            files.append(file_path)
+                            media = message[0].media
+                            if media:
+                                _, extension = os.path.splitext(media.file_name or '')
+                                if extension.lower() not in ALLOWED_EXTENSIONS:
+                                    continue
+                                file_path = await message[0].download_media()
+                                file_size = os.path.getsize(file_path)
+                                if file_size > MAX_SIZE_BYTES:
+                                    os.remove(file_path)
+                                    continue
+                                files.append(file_path)
                     except Exception as e:
                         return {'error': f"Failed to process link {link}. Error: {str(e)}"}
                 return {'files': files}
