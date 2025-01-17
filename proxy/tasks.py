@@ -1,33 +1,35 @@
-from concurrent.futures import ThreadPoolExecutor
-
 from celery import app
-import asyncio
-from proxy_checker import ProxyChecker
+from .checker import ProxyChecker
 
 from .models import Proxy
 
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
 @app.shared_task
 def check_proxy_health():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(async_check_proxy_help())
-
-
-async def async_check_proxy_help():
     checker = ProxyChecker()
     proxies = Proxy.objects.all()
 
-    loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor() as executor:
-        for proxy in proxies:
-            response = await loop.run_in_executor(executor, checker.check_proxy, f'{proxy.host}:{proxy.port}')
-            if not response:
-                proxy.is_active = False
-                proxy.save()
-            elif proxy.is_actve is None:
-                proxy.country = response['country']
-                proxy.is_active = True
-                proxy.country_code = response['country_code']
-                proxy.anonymity = response['anonymity']
-                proxy.timeout = response['timeout']
-                proxy.save()
+    def check_and_update(proxy):
+        response = checker.check_proxy(f'{proxy.host}:{proxy.port}')
+        if not response:
+            proxy.is_active = False
+        elif proxy.is_active is None:
+            proxy.country = response['country']
+            proxy.is_active = True
+            proxy.country_code = response['country_code']
+            proxy.anonymity = response['anonymity']
+            proxy.timeout = response['timeout']
+        proxy.save()
+        return proxy
+
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        future_to_proxy = {executor.submit(check_and_update, proxy): proxy for proxy in proxies}
+        for future in as_completed(future_to_proxy):
+            proxy = future_to_proxy[future]
+            try:
+                future.result()
+            except Exception as e:
+                print(f'Error checking proxy {proxy.host}:{proxy.port} - {e}')

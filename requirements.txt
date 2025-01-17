@@ -75,3 +75,5 @@ djangorestframework-simplejwt==5.3.0
 django-cors-headers==4.3.1
 django-prometheus==2.3.1
 proxy-checker==0.6
+djangorestframework==3.15.2
+pycurl==7.45.4
