@@ -51,6 +51,7 @@ npm install pm2 -g
 
 3. Run the application using PM2:
 ```
+cd /dist
 pm2 start `which http-server` --name pooler2-front -- -p 8080 -P http://localhost:8080?
 ```
 
