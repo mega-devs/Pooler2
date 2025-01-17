@@ -39,9 +39,10 @@ INSTALLED_APPS = [
     'drf_yasg',
     'corsheaders',
     'django_prometheus',
+    'debug_toolbar',
 ]
-
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -270,3 +271,14 @@ SIMPLE_JWT = {
 # for Session Settings
 SESSION_COOKIE_AGE = 3600  # in seconds
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+
+# Django Debug Toolbar
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
+
+if DEBUG:
+    import socket
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]

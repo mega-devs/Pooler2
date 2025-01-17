@@ -1,4 +1,4 @@
-SETUP:
+## SETUP for Backend:
 
 1. First, create the .env file:
 ```
@@ -34,6 +34,38 @@ docker-compose up -d
 4. To check the running containers:
 ```
 docker-compose ps
+```
+
+## SETUP for Frontend:
+
+1. Install npm dependencies and build:
+```
+npm install
+npm run build
+```
+
+2. Install PM2 globally:
+```
+npm install pm2 -g
+```
+
+3. Run the application using PM2:
+```
+cd /dist
+pm2 start `which http-server` --name pooler2-front -- -p 8080 -P http://localhost:8080?
+```
+
+4. Check PM2 status and logs:
+```
+pm2 status
+```
+```
+pm2 logs
+```
+
+5. To monitor the application:
+```
+pm2 monit
 ```
 
 
