@@ -1,8 +1,11 @@
 from __future__ import absolute_import, unicode_literals
+
 import os
+from datetime import timedelta
+
 from celery import Celery
 
-# default Django settings module for the 'celery' program.
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'root.settings')
 
 app = Celery('root')  # project name as the Celery app name
@@ -22,6 +25,14 @@ app.conf.broker_transport_options = {
     "health_check_interval": 25,  # Интервал проверки состояния брокера
 }
 
+app.conf.beat_schedule = {
+    "proxies": {
+        "task": 'proxy.tasks.check_proxy_health',
+        "schedule": timedelta(seconds=180),
+    },
+}
+
 @app.task(bind=True)
 def debug_task(self):
     print(f"Request: {self.request!r}")
+
