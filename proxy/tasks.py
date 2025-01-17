@@ -16,14 +16,12 @@ def check_proxy_health():
         response = checker.check_proxy(f'{proxy.host}:{proxy.port}')
         if not response:
             proxy.is_active = False
-        elif proxy.is_active is None:
+        elif proxy.is_active is None or not proxy.is_active:
             proxy.country = response['country']
             proxy.is_active = True
             proxy.country_code = response['country_code']
             proxy.anonymity = response['anonymity']
             proxy.timeout = response['timeout']
-        elif not proxy.is_active:
-            proxy.is_active = True
         proxy.save()
         return proxy
 
