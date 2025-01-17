@@ -11,7 +11,6 @@ app_name = PoolerConfig.name
 urlpatterns = [
     path('', views.redirect_to_panel, name='redirect_to_panel'),
     path('panel/', views.panel, name='panel'),
-    path('panel/tables/', views.panel_table_placeholder, name='panel_table_placeholder'),
     path('panel/settings/', views.panel_settings, name='panel_settings'),
     path('upload_file_by_url/', views.upload_file_by_url, name='upload_file_by_url'),
     path('logs/', views.get_logs, name='get_logs'),

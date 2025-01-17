@@ -43,7 +43,6 @@ logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
-@login_required(login_url='users:login')
 def panel_table(request):
     """Display data with pagination or random selection.
     

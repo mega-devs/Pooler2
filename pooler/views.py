@@ -40,7 +40,6 @@ def redirect_to_panel(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 @require_http_methods(["GET"])
 def panel(request):
     """
@@ -67,20 +66,6 @@ def panel(request):
         'smtp_checked': smtp_checked,
         'imap_checked': imap_checked
     }
-    return JsonResponse(data)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@require_http_methods(["GET"])
-def panel_table_placeholder(request):
-    """
-    Returns JSON response for table data.
-    
-    This view function handles GET requests and requires user authentication.    
-    Returns JSON response with active page context set to 'tables'.
-    """
-    data = {'active_page': "tables"}
     return JsonResponse(data)
 
 
