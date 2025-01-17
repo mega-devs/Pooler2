@@ -55,12 +55,14 @@ def panel(request):
     smtp_checked = smtp_invalid_count + smtp_valid_count
     imap_checked = imap_invalid_count + imap_valid_count
     smtp_all_count = ExtractedData.objects.all().count()
+    imap_all_count = ExtractedData.objects.all().count()
     
     data = {
         'active_page': "dashboard",
         'count_of_smtp_valid': smtp_valid_count,
         'count_of_smtp_invalid': smtp_invalid_count,
         'count_of_smtp': smtp_all_count,
+        'count_of_imap': imap_all_count,
         'count_imap_valid': imap_valid_count,
         'count_imap_invalid': imap_invalid_count,
         'smtp_checked': smtp_checked,
