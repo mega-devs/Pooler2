@@ -74,4 +74,5 @@ django-import-export==3.3.1
 djangorestframework-simplejwt==5.3.0
 django-cors-headers==4.3.1
 django-prometheus==2.3.1
+django-debug-toolbar==4.3.0
 proxy-checker==0.6

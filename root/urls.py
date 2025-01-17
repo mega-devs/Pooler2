@@ -12,6 +12,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from files.views import ExtractedDataModelViewSet, UploadedFileModelViewSet
 from proxy.views import ProxyViewSet
+from root import settings
 from users.views import UserViewSet
 
 # admin.site.index_template = 'admin/index.html'
@@ -58,3 +59,8 @@ urlpatterns = [
    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
    path('prometheus/', include('django_prometheus.urls')),
 ] + router.urls
+
+if settings.DEBUG:
+    urlpatterns += [
+        path('__debug__/', include('debug_toolbar.urls')),
+    ]
