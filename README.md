@@ -1,4 +1,4 @@
-SETUP:
+## SETUP for Backend:
 
 1. First, create the .env file:
 ```
@@ -36,27 +36,25 @@ docker-compose up -d
 docker-compose ps
 ```
 
-Front:
+## SETUP for Frontend:
 
-5. Install npm dependencies and build:
-```npm install
+1. Install npm dependencies and build:
+```
+npm install
 npm run build
 ```
 
-6. Install PM2 globally:
+2. Install PM2 globally:
 ```
 npm install pm2 -g
 ```
- pm2 start `which http-server` --name pooler2-front -- -p 8080 -P http://localhost:8080?
+
+3. Run the application using PM2:
+```
+pm2 start `which http-server` --name pooler2-front -- -p 8080 -P http://localhost:8080?
 ```
 
-7. Run the application using PM2:
-
-```
-pm2 start npm --name "MEGAMAILER.TO" -- start
-```
-
-8. Check PM2 status and logs:
+4. Check PM2 status and logs:
 ```
 pm2 status
 ```
@@ -64,7 +62,7 @@ pm2 status
 pm2 logs
 ```
 
-9. To monitor the application:
+5. To monitor the application:
 ```
 pm2 monit
 ```
