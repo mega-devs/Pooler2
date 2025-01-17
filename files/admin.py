@@ -61,13 +61,7 @@ class CustomAdminSite(admin.AdminSite):
         return super().index(request, context)
 
 
-# Create the custom admin site instance
-admin_site = CustomAdminSite()
-
-# Register all models with the custom admin site
-admin_site.register(User, CustomUserAdmin)
-admin_site.register(UploadedFile, UploadedFileAdmin)
-admin_site.register(ExtractedData, ExtractedDataAdmin)
-
-# Replace the default admin site
-# admin.site = admin_site
+# Register models with the default admin site
+# admin.site.register(User)
+admin.site.register(UploadedFile, UploadedFileAdmin)
+admin.site.register(ExtractedData, ExtractedDataAdmin)
