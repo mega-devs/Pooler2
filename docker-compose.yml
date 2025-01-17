@@ -83,6 +83,12 @@ services:
       - '3000:3000'
     volumes:
       - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_SECURITY_COOKIE_SAMESITE=none
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_NAME=Main Org.
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     restart: unless-stopped
     depends_on:
       - prometheus
