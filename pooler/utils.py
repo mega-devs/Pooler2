@@ -9,8 +9,6 @@ from asyncio import gather
 from datetime import datetime
 
 import dns.resolver
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 from validate_email_address import validate_email
 
 from files.models import ExtractedData
@@ -321,7 +319,7 @@ async def process_chunk_from_db(chunk, smtp_results):
 @app.task
 async def imap_process_chunk_from_db(chunk, imap_results):
     """Validates email addresses via IMAP protocol using data loaded from database"""
-    
+
     email = chunk.get('email')
     name, server = email.split('@')
     imap_server = 'imap.' + server
@@ -394,6 +392,7 @@ async def check_smtp_imap_emails_from_zip(filename):
         ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'], imap_is_valid=el[
             'imap_status'])
 
+
 @app.task
 async def check_smtp_emails_from_db():
     '''Main function for checking SMTP email addresses, launches process_chunk_from_db subfunction'''
@@ -406,6 +405,7 @@ async def check_smtp_emails_from_db():
 
     for el in smtp_results:
         ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
+
 
 @app.task
 async def check_imap_emails_from_db():
