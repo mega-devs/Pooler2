@@ -22,6 +22,8 @@ def check_proxy_health():
             proxy.country_code = response['country_code']
             proxy.anonymity = response['anonymity']
             proxy.timeout = response['timeout']
+        elif not proxy.is_active:
+            proxy.is_active = True
         proxy.save()
         return proxy
 
