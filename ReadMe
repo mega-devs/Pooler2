@@ -1,7 +1,7 @@
 SETUP:
 
 1. First, create the .env file:
-```
+```bash
 nano .env
 ```
 
