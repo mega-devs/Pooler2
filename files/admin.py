@@ -1,16 +1,14 @@
 from django.contrib import admin
 from django.db.models import Count
-from django.contrib.auth import get_user_model
 
 from import_export.admin import ImportExportModelAdmin
 
 from files.resources import ExtractedDataResource, UploadedFileResource
+from users.models import User
 from .models import UploadedFile, ExtractedData
 
 from users.admin import CustomUserAdmin
 
-
-User = get_user_model()
 
 
 class UploadedFileAdmin(ImportExportModelAdmin):
@@ -27,6 +25,8 @@ class ExtractedDataAdmin(ImportExportModelAdmin):
     list_filter = ('provider', 'country', 'smtp_is_valid', 'imap_is_valid')
     search_fields = ('email', 'provider', 'filename', 'uploaded_file__filename')
     ordering = ('-uploaded_file__upload_date',)
+
+
 
 
 class CustomAdminSite(admin.AdminSite):
@@ -70,4 +70,4 @@ admin_site.register(UploadedFile, UploadedFileAdmin)
 admin_site.register(ExtractedData, ExtractedDataAdmin)
 
 # Replace the default admin site
-admin.site = admin_site
+# admin.site = admin_site
