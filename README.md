@@ -36,6 +36,39 @@ docker-compose up -d
 docker-compose ps
 ```
 
+Front:
+
+5. Install npm dependencies and build:
+```npm install
+npm run build
+```
+
+6. Install PM2 globally:
+```
+npm install pm2 -g
+```
+ pm2 start `which http-server` --name pooler2-front -- -p 8080 -P http://localhost:8080?
+```
+
+7. Run the application using PM2:
+
+```
+pm2 start npm --name "MEGAMAILER.TO" -- start
+```
+
+8. Check PM2 status and logs:
+```
+pm2 status
+```
+```
+pm2 logs
+```
+
+9. To monitor the application:
+```
+pm2 monit
+```
+
 
 The series of messages from MEGAMAILER.TO's CEO outlines a project to improve and enhance an existing codebase. Here is a detailed breakdown of the technical requirements and suggestions provided:
 
