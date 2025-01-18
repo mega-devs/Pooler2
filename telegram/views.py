@@ -4,6 +4,8 @@ import re
 import zipfile
 from datetime import datetime
 
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from telethon import TelegramClient
 from asgiref.sync import async_to_sync
 
@@ -34,10 +36,48 @@ ALLOWED_EXTENSIONS = [
     '.docx', '.xlsx', '.pptx'
 ]
 
-MAX_SIZE_MB = 300
-MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
 
-
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'channel': openapi.Schema(type=openapi.TYPE_STRING, description="The Telegram channel's username or link."),
+        },
+        required=['channel']
+    ),
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'messages': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                    'file': openapi.Schema(type=openapi.TYPE_STRING, description="Path to the saved JSON file.")
+                }
+            )
+        ),
+        400: openapi.Response(
+            'Bad Request',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+        405: openapi.Response(
+            'Method Not Allowed',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+    }
+)
 @api_view(['POST'])
 @csrf_exempt
 async def telegram_add_channel(request):
@@ -92,6 +132,54 @@ async def telegram_add_channel(request):
     }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'links': openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(type=openapi.TYPE_STRING),
+                description="List of Telegram message links."
+            ),
+            'date': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_DATE,
+                description="Filter files by date in YYYY-MM-DD format (optional)."
+            ),
+            'max_size': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description="Maximum file size in MB (optional)."
+            ),
+        },
+        required=['links']
+    ),
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'files': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                }
+            )
+        ),
+        400: openapi.Response(
+            'Bad Request',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+        500: openapi.Response(
+            'Server Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+    }
+)
 @api_view(['POST'])
 def download_files_from_tg(request):
     links = request.data.get('links', [])
@@ -115,7 +203,7 @@ def download_files_from_tg(request):
         except ValueError:
             return JsonResponse({'error': 'Invalid max_size. Must be an integer.'}, status=400)
     else:
-        MAX_SIZE_BYTES = 300 * 1024 * 1024  # Задаем значение по умолчанию 300 МБ
+        MAX_SIZE_BYTES = 300 * 1024 * 1024
 
     def sync_download():
         async def download():
@@ -155,6 +243,53 @@ def download_files_from_tg(request):
     return JsonResponse(result)
 
 
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'date',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_STRING,
+            description="Filter files by date in YYYY-MM-DD format (optional)."
+        ),
+        openapi.Parameter(
+            'max_size',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_INTEGER,
+            description="Maximum file size in MB (optional)."
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        400: openapi.Response(
+            'Bad Request',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+    }
+)
 @api_view(['GET'])
 @require_GET
 async def get_combofiles_from_tg(request):
@@ -209,6 +344,53 @@ async def get_combofiles_from_tg(request):
             os.remove(file)
 
 
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'date',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_STRING,
+            description="Filter files by date in YYYY-MM-DD format (optional)."
+        ),
+        openapi.Parameter(
+            'max_size',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_INTEGER,
+            description="Maximum file size in MB (optional)."
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        400: openapi.Response(
+            'Bad Request',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        ),
+    }
+)
 @api_view(['GET'])
 @require_GET
 async def get_from_tg(request):
