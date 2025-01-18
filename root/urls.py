@@ -57,6 +57,7 @@ urlpatterns = [
    path('files/', include('files.urls')),
    path('api/', include('pooler.urls')),
    path('telegram/', include('telegram.urls')),
+   path('ufw_manager/', include('ufw_manager.urls')),
    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
    path('prometheus/', include('django_prometheus.urls')),

@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'files.apps.FilesConfig',
     'proxy.apps.ProxyConfig',
     'telegram.apps.TelegramConfig',
+    'ufw_manager.apps.UfwManagerConfig',
     'rest_framework',
     'rest_framework_simplejwt',
     'import_export',
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'django_prometheus',
     'debug_toolbar',
 ]
+
 MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
