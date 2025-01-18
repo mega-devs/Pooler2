@@ -260,6 +260,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10
 }
 
@@ -269,10 +270,8 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# for Session Settings
-SESSION_COOKIE_AGE = 3600  # in seconds
+SESSION_COOKIE_AGE = 60 * 60  # one hour in seconds
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-
 
 # Django Debug Toolbar
 INTERNAL_IPS = [

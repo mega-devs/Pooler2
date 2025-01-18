@@ -14,6 +14,8 @@ from files.views import ExtractedDataModelViewSet, UploadedFileModelViewSet
 from proxy.views import ProxyViewSet
 from root import settings
 from users.views import UserViewSet
+from django.conf import settings as main_settings
+from django.conf.urls.static import static
 
 # admin.site.index_template = 'admin/index.html'
 
@@ -58,7 +60,7 @@ urlpatterns = [
    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
    path('prometheus/', include('django_prometheus.urls')),
-] + router.urls
+] + router.urls + static(main_settings.MEDIA_URL, document_root=main_settings.MEDIA_ROOT)
 
 if settings.DEBUG:
     urlpatterns += [

@@ -8,4 +8,5 @@ urlpatterns = [
     path('signin/', views.signin),
     path('logout/', views.custom_logout_view),
     path('session/token/<str:token>/', views.get_session_by_token, name='get_session_by_token'),
+    path('details/<str:token>/', views.user_details, name='user_details'),
 ]

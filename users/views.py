@@ -6,11 +6,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework.renderers import JSONRenderer
 
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+
 from django.contrib.auth import authenticate
 from django.contrib.auth import logout
 
 from drf_yasg.utils import swagger_auto_schema
-
 
 from users.serializers import UserSigninSerializer, UserSignupSerializer
 from .models import User
@@ -113,6 +115,30 @@ def get_session_by_token(request, token):
         })
     except Exception:
         return JsonResponse({'error': 'Invalid token'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+
+@api_view(['GET'])
+def user_details(request, token):
+    """
+    API endpoint to retrieve user details by token.
+
+    Returns the username, email, profile picture URL, and last login time
+    for the user associated with the provided token.
+    """
+    try:
+        decoded_token = AccessToken(token)
+        user_id = decoded_token['user_id']
+        user = User.objects.get(id=user_id)
+
+        user_data = {
+            "username": user.username,
+            "email": user.email if hasattr(user, 'email') else None,
+            "last_login": user.last_login,
+        }        
+        return Response(user_data, status=status.HTTP_200_OK)
+    except Exception:
+        return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
+    
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
