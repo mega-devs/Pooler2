@@ -2,6 +2,7 @@ import json
 import os
 import re
 import zipfile
+from datetime import datetime
 
 from telethon import TelegramClient
 from asgiref.sync import async_to_sync
@@ -91,18 +92,30 @@ async def telegram_add_channel(request):
     }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-@decorator.api_view(['POST'])
+@api_view(['POST'])
 def download_files_from_tg(request):
-    """
-    Downloads files from Telegram links.
-
-    Takes a list of Telegram message links as input.
-    Returns a JSON response with downloaded file paths.
-    """
     links = request.data.get('links', [])
-    
+    date_str = request.data.get('date', None)
+    max_size = request.data.get('max_size', None)
+
     if not isinstance(links, list):
         return JsonResponse({'error': 'Invalid input. "links" must be a list.'}, status=400)
+
+    if date_str:
+        try:
+            filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+    else:
+        filter_date = None
+
+    if max_size is not None:
+        try:
+            MAX_SIZE_BYTES = int(max_size) * 1024 * 1024
+        except ValueError:
+            return JsonResponse({'error': 'Invalid max_size. Must be an integer.'}, status=400)
+    else:
+        MAX_SIZE_BYTES = 300 * 1024 * 1024  # Задаем значение по умолчанию 300 МБ
 
     def sync_download():
         async def download():
@@ -113,6 +126,11 @@ def download_files_from_tg(request):
                         message = await client.get_messages(link, limit=1)
                         if message and message[0].media:
                             media = message[0].media
+                            message_date = message[0].date.date()
+
+                            if filter_date and message_date != filter_date:
+                                continue
+
                             if media:
                                 _, extension = os.path.splitext(media.file_name or '')
                                 if extension.lower() not in ALLOWED_EXTENSIONS:
@@ -130,23 +148,32 @@ def download_files_from_tg(request):
         return async_to_sync(download)()
 
     result = sync_download()
-    
+
     if 'error' in result:
         return JsonResponse(result, status=500)
-    
+
     return JsonResponse(result)
 
 
 @api_view(['GET'])
 @require_GET
 async def get_combofiles_from_tg(request):
-    """Downloads files from Telegram links stored in a text file.
+    date_str = request.GET.get('date', None)
+    max_size = request.GET.get('max_size', None)
 
-    Creates a zip archive containing all downloaded files.
-    Returns the zip file as a downloadable response."""
+    if date_str:
+        try:
+            filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({
+                'status': 'error',
+                'message': 'Invalid date format. Use YYYY-MM-DD.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        filter_date = None
+
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
     try:
-        links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
         with open(links_file_path, 'r') as file:
             links = [link.strip() for link in file.readlines()]
     except FileNotFoundError:
@@ -155,7 +182,11 @@ async def get_combofiles_from_tg(request):
             'message': 'Telegram links file not found'
         }, status=status.HTTP_404_NOT_FOUND)
 
-    files = await download_files_from_tg(links)
+    files = await download_files_from_tg({
+        "links": links,
+        "date": filter_date,
+        "max_size": max_size
+    })
 
     if not files:
         return Response({
@@ -171,7 +202,6 @@ async def get_combofiles_from_tg(request):
     try:
         response = FileResponse(open(zip_filename, 'rb'), as_attachment=True)
         response['Content-Disposition'] = 'attachment; filename="tg.zip"'
-        print(response)
         return response
     finally:
         os.remove(zip_filename)
@@ -182,14 +212,22 @@ async def get_combofiles_from_tg(request):
 @api_view(['GET'])
 @require_GET
 async def get_from_tg(request):
-    """Downloads files from Telegram links stored in a text file.
-
-    Creates a zip archive containing all downloaded files.
-    Returns the zip file as a downloadable response."""
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
+    date_str = request.GET.get('date', None)
+    max_size = request.GET.get('max_size', None)
+
+    if date_str:
+        try:
+            filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({
+                'status': 'error',
+                'message': 'Invalid date format. Use YYYY-MM-DD.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        filter_date = None
 
     try:
-        links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
         with open(links_file_path, 'r') as file:
             links = [link.strip() for link in file.readlines()]
     except FileNotFoundError:
@@ -198,7 +236,11 @@ async def get_from_tg(request):
             'message': 'Telegram links file not found'
         }, status=status.HTTP_404_NOT_FOUND)
 
-    files = await download_files_from_tg(links)
+    files = await download_files_from_tg({
+        "links": links,
+        "date": filter_date,
+        "max_size": max_size
+    })
 
     if not files:
         return Response({
@@ -219,4 +261,3 @@ async def get_from_tg(request):
         os.remove(zip_filename)
         for file in files:
             os.remove(file)
-            
