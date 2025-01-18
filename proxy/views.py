@@ -35,7 +35,7 @@ class ProxyViewSet(ModelViewSet):
                         proxy_key = f"{host}:{port}"
 
                         if proxy_key in existing_proxies:
-                            errors.append(f"Proxy {proxy_key} уже существует.")
+                            errors.append(f"Proxy {proxy_key} already exist.")
                         else:
                             Proxy.objects.create(host=host, port=int(port))
                             created_proxies.append(proxy_key)
