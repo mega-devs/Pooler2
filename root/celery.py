@@ -28,7 +28,7 @@ app.conf.broker_transport_options = {
 app.conf.beat_schedule = {
     "proxies": {
         "task": 'proxy.tasks.check_proxy_health',
-        "schedule": timedelta(seconds=15),
+        "schedule": timedelta(seconds=300),
     },
 }
 
