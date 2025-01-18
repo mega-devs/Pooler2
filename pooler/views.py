@@ -11,6 +11,8 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -27,18 +29,53 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 logger = logging.getLogger(__name__)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Redirect URL',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'redirect': openapi.Schema(type=openapi.TYPE_STRING)}
+            )
+        )
+    }
+)
 @api_view(['GET'])
 @require_http_methods(["GET"])
 def redirect_to_panel(request):
     """
     Redirects user to the main panel view.
-    
+
     This view function handles GET requests and redirects to the panel URL 
     using Django's reverse_lazy function to avoid any circular import issues.
     """
     return JsonResponse({'redirect': reverse_lazy('pooler:panel')})
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'active_page': openapi.Schema(type=openapi.TYPE_STRING),
+                    'count_of_smtp_valid': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'count_of_smtp_invalid': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'count_of_smtp': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'count_of_imap': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'count_imap_valid': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'count_imap_invalid': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'smtp_checked': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'imap_checked': openapi.Schema(type=openapi.TYPE_INTEGER),
+                }
+            )
+        )
+    }
+)
 @api_view(['GET'])
 @require_http_methods(["GET"])
 def panel(request):
@@ -71,6 +108,34 @@ def panel(request):
     return JsonResponse(data)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'active_page': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        )
+    }
+)
+@swagger_auto_schema(
+    method='post',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'active_page': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        )
+    }
+)
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 @require_http_methods(["GET", "POST"])
@@ -127,6 +192,29 @@ def upload_file_by_url(request):
         return Response({'status': 405, 'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        )
+    }
+)
 @api_view(['GET'])
 @require_GET
 def check_smtp_view(request):
@@ -143,6 +231,29 @@ def check_smtp_view(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        )
+    }
+)
 @api_view(['GET'])
 @require_GET
 def check_imap_view(request):
@@ -159,6 +270,31 @@ def check_imap_view(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'smtp_logs': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                    'imap_logs': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                    'n': openapi.Schema(type=openapi.TYPE_INTEGER)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        )
+    }
+)
 @adrf.api_view(['GET'])
 async def get_logs(request):
     """
@@ -173,6 +309,29 @@ async def get_logs(request):
     return JsonResponse({"logs": logs})
 
 
+@swagger_auto_schema(
+    method='post',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        )
+    }
+)
 @adrf.api_view(['POST'])
 async def clear_temp_logs(request):
     """
@@ -196,6 +355,38 @@ async def clear_temp_logs(request):
         return JsonResponse({"message": str(e)}, status=500)  
      
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Log files not found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        )
+    }
+)
 @api_view(['GET'])
 def clear_full_logs(request):
     """
@@ -217,6 +408,30 @@ def clear_full_logs(request):
         return Response({"message": str(e)}, status=500)
     
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'smtp': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                    'imap': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
 @api_view(['GET'])
 def download_logs_file(request):
     """

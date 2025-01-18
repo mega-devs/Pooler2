@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
+from drf_yasg import openapi
 
 from .serializers import ExtractedDataSerializer, UploadedFileSerializer
 from .models import UploadedFile, ExtractedData
@@ -42,6 +43,81 @@ logger = logging.getLogger(__name__)
 # )
 
 
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'show_all',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_BOOLEAN,
+            description="Show all records"
+        ),
+        openapi.Parameter(
+            'random_count',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_INTEGER,
+            description="Number of random records to return"
+        ),
+        openapi.Parameter(
+            'provider',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_STRING,
+            description="Filter by provider"
+        ),
+        openapi.Parameter(
+            'email',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_STRING,
+            description="Filter by email"
+        ),
+        openapi.Parameter(
+            'country',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_STRING,
+            description="Filter by country"
+        ),
+        openapi.Parameter(
+            'page',
+            openapi.IN_QUERY,
+            type=openapi.TYPE_INTEGER,
+            description="Page number for pagination"
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'data': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                                'password': openapi.Schema(type=openapi.TYPE_STRING),
+                                'provider': openapi.Schema(type=openapi.TYPE_STRING),
+                                'country': openapi.Schema(type=openapi.TYPE_STRING),
+                                'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                                'line_number': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'upload_origin': openapi.Schema(type=openapi.TYPE_STRING),
+                                'smtp_is_valid': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                'imap_is_valid': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                            }
+                        )
+                    ),
+                    'countries': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
+                    'show_all': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    'random_count': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'current_page': openapi.Schema(type=openapi.TYPE_INTEGER, nullable=True),
+                    'total_pages': openapi.Schema(type=openapi.TYPE_INTEGER, nullable=True),
+                    'has_next': openapi.Schema(type=openapi.TYPE_BOOLEAN, nullable=True),
+                    'has_previous': openapi.Schema(type=openapi.TYPE_BOOLEAN, nullable=True),
+                }
+            )
+        )
+    }
+)
 @api_view(['GET'])
 def panel_table(request):
     """Display data with pagination or random selection.
@@ -111,7 +187,39 @@ def panel_table(request):
     return JsonResponse(response_data)
 
 
-# --- Upload Combo File ---
+@swagger_auto_schema(
+    method='post',
+    responses={
+        201: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'file_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                }
+            )
+        ),
+        400: openapi.Response(
+            'Bad Request',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
 @api_view(['POST'])
 @require_POST
 def upload_combofile(request):
@@ -160,6 +268,48 @@ def upload_combofile(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'filename',
+            openapi.IN_PATH,
+            description="The name of the file to download",
+            type=openapi.TYPE_STRING
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                    'download_url': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
 @api_view(['GET'])
 @require_GET
 def download_file(request, filename):
@@ -191,6 +341,42 @@ def download_file(request, filename):
         }, status=500)
     
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'files': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                                'file_path': openapi.Schema(type=openapi.TYPE_STRING),
+                                'upload_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING),
+                            }
+                        )
+                    )
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
 @api_view(['GET'])
 @login_required
 def uploaded_files_list(request):
@@ -216,6 +402,84 @@ def uploaded_files_list(request):
     }, status=200)
 
 
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'filename': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="Name of the uploaded file"
+            ),
+            'file_path': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="Path to the uploaded file"
+            ),
+            'upload_date': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_DATETIME,
+                description="Date the file was uploaded"
+            ),
+            'status': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="Status of the uploaded file"
+            ),
+        },
+        required=['filename', 'country', 'is_checked']
+    ),
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'file': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                            'file_path': openapi.Schema(type=openapi.TYPE_STRING),
+                            'upload_date': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+                            'status': openapi.Schema(type=openapi.TYPE_STRING),
+                        }
+                    )
+                }
+            )
+        ),
+        400: openapi.Response(
+            'Bad Request',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'errors': openapi.Schema(type=openapi.TYPE_OBJECT)
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(
+                        type=openapi.TYPE_STRING
+                    )
+                }
+            )
+        ),
+        405: openapi.Response(
+            'Method Not Allowed',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(
+                        type=openapi.TYPE_STRING
+                    )
+                }
+            )
+        ),
+    }
+)
 @api_view(['PUT'])
 @login_required
 def uploaded_file_update(request, pk):
@@ -251,6 +515,47 @@ def uploaded_file_update(request, pk):
     }, status=405)
 
 
+@swagger_auto_schema(
+    method='delete',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        405: openapi.Response(
+            'Method Not Allowed',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
 @api_view(['DELETE'])
 @login_required
 def uploaded_file_delete(request, pk):
@@ -317,6 +622,36 @@ def uploaded_file_delete(request, pk):
     }, status=405)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'data': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'line_number': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                                'password': openapi.Schema(type=openapi.TYPE_STRING),
+                                'provider': openapi.Schema(type=openapi.TYPE_STRING),
+                                'country': openapi.Schema(type=openapi.TYPE_STRING),
+                                'upload_origin': openapi.Schema(type=openapi.TYPE_STRING),
+                            }
+                        )
+                    ),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        )
+    }
+)
 @api_view(['GET', 'POST'])
 @login_required
 def download_txt(request):
@@ -352,6 +687,91 @@ def download_txt(request):
     }, status=200)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'data': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'email': openapi.Schema(type=openapi.TYPE_STRING),
+                            'password': openapi.Schema(type=openapi.TYPE_STRING),
+                            'provider': openapi.Schema(type=openapi.TYPE_STRING),
+                            'country': openapi.Schema(type=openapi.TYPE_STRING),
+                            'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                            'line_number': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'upload_origin': openapi.Schema(type=openapi.TYPE_STRING),
+                        }
+                    )
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+            'password': openapi.Schema(type=openapi.TYPE_STRING),
+            'provider': openapi.Schema(type=openapi.TYPE_STRING),
+            'country': openapi.Schema(type=openapi.TYPE_STRING),
+            'filename': openapi.Schema(type=openapi.TYPE_STRING),
+            'line_number': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'upload_origin': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+    ),
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        400: openapi.Response(
+            'Bad Request',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(
+                        type=openapi.TYPE_STRING
+                    ),
+                    'errors': openapi.Schema(
+                        type=openapi.TYPE_OBJECT)
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
 @api_view(['GET', 'POST'])
 @login_required
 def extracted_data_update(request, pk):
@@ -391,6 +811,67 @@ def extracted_data_update(request, pk):
         }, status=200)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'data': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'email': openapi.Schema(type=openapi.TYPE_STRING),
+                            'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                        }
+                    ),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
+@swagger_auto_schema(
+    method='post',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(
+                        type=openapi.TYPE_STRING
+                    ),
+                    'message': openapi.Schema(
+                        type=openapi.TYPE_STRING
+                    )
+                }
+            )
+        ),
+    }
+)
 @api_view(['GET', 'POST'])
 @login_required
 def extracted_data_delete(request, pk):
