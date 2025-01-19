@@ -15,7 +15,10 @@ def check_proxy_health():
     proxies = Proxy.objects.all()
 
     def check_and_update(proxy):
-        response = checker.check_proxy(f'{proxy.host}:{proxy.port}')
+        if proxy.username and proxy.password:
+            response = checker.check_proxy(f'{proxy.host}:{proxy.port}', user=proxy.username, password=proxy.password)
+        else:
+            response = checker.check_proxy(f'{proxy.host}:{proxy.port}')
         if not response:
             proxy.is_active = False
         elif proxy.is_active is None or not proxy.is_active:
