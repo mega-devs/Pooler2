@@ -78,3 +78,4 @@ django-debug-toolbar==4.3.0
 proxy-checker==0.6
 djangorestframework==3.15.2
 pycurl==7.45.4
+django-tracking2==0.5.1

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_prometheus',
     'debug_toolbar',
+    'tracking',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_prometheus.middleware.PrometheusAfterMiddleware',
+    'tracking.middleware.VisitorTrackingMiddleware',
 ]
 
 # CORS settings
@@ -292,3 +294,10 @@ LOG_FILES = {
     'url_fetch': 'app/data/temp_logs/url_fetch.log',
     'telegram_fetch': 'app/data/temp_logs/telegram_fetch.log'
 }
+
+# Tracking settings
+TRACK_PAGEVIEWS = True
+TRACK_IGNORE_URLS = ['/favicon.ico']
+TRACK_IGNORE_USER_AGENTS = ['googlebot', 'bot', 'spider', 'crawler']
+TRACK_IGNORE_STATUS_CODES = [400, 404, 403, 405, 410, 500]
+TRACK_USING_GEOIP = True
