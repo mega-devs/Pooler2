@@ -301,3 +301,10 @@ TRACK_IGNORE_URLS = ['/favicon.ico']
 TRACK_IGNORE_USER_AGENTS = ['googlebot', 'bot', 'spider', 'crawler']
 TRACK_IGNORE_STATUS_CODES = [400, 404, 403, 405, 410, 500]
 TRACK_USING_GEOIP = True
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": 'redis://redis:6379/1',
+    }
+}
