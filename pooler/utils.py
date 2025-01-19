@@ -261,15 +261,14 @@ async def process_chunk_from_file(chunk, results):
 
 
 async def process_chunk_from_db(chunk, smtp_results):
-    """Так же проверяет почтовые адреса на валидность SMTP, но данные загружены из бд."""
-    # status = False
-
+    thread_num = asyncio.current_task().get_name()
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
     email = chunk.get('email')
-    print(f'{email=}')
     name, server = email.split('@')
     smtp_server = 'smtp.' + server
-
     password = chunk.get('password')
+    port = 587
 
     try:
         match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
@@ -295,22 +294,29 @@ async def process_chunk_from_db(chunk, smtp_results):
                             status = None
             except Exception as ex:
                 print(ex)
-        #     else:
-        #         status = False
-        # else:
-        #     status = False
 
         smtp_result = {'email': email, 'password': password, 'status': status,
                        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         smtp_results.append(smtp_result)
-        # status = await driver.check_connection(email, password)
-        # if status == 'valid':
-        #     results.append(status)
 
         logger.info({'email': email,
                      'password': password,
                      'valid': status,
                      'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+        
+        # Add formatted logging
+        log_entry = LogFormatter.format_smtp_log(
+            thread_num=thread_num,
+            timestamp=timestamp, 
+            server=smtp_server,
+            user=email,
+            port=port,
+            response=str(code),
+            is_valid=status
+        )
+        
+        async with aiofiles.open(settings.LOG_FILES['smtp'], 'a') as f:
+            await f.write(log_entry + '\n')
 
     except Exception as e:
         logger.error(f"Error checking connection for email {email}: {e}")
@@ -323,8 +329,8 @@ async def imap_process_chunk_from_db(chunk, imap_results):
     email = chunk.get('email')
     name, server = email.split('@')
     imap_server = 'imap.' + server
-
     password = chunk.get('password')
+    port = 993
 
     try:
         match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
@@ -348,14 +354,23 @@ async def imap_process_chunk_from_db(chunk, imap_results):
         imap_result = {'email': email, 'password': password, 'status': imap_status,
                        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         imap_results.append(imap_result)
-        # status = await driver.check_connection(email, password)
-        # if status == 'valid':
-        #     results.append(status)
 
         logger.info({'email': email,
                      'password': password,
                      'valid': imap_status,
                      'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+        
+        log_entry = LogFormatter.format_imap_log(
+            thread_num=thread_num,
+            timestamp=timestamp,
+            server=imap_server, 
+            user=email,
+            port=port,
+            is_valid=imap_status=='valid'
+        )
+        
+        async with aiofiles.open(settings.LOG_FILES['imap'], 'a') as f:
+            await f.write(log_entry + '\n')
 
     except Exception as e:
         logger.error(f"Error checking connection for email {email}: {e}")
@@ -449,3 +464,26 @@ async def read_logs(ind):
     imap_logs = list(map(lambda line: line.strip(), imap_lines))[ind:ind + 100]
 
     return {"smtp_logs": smtp_logs, "imap_logs": imap_logs, "n": len(smtp_logs)}
+
+class LogFormatter:
+    @staticmethod
+    def format_smtp_log(thread_num, timestamp, server, user, port, response, is_valid):
+        color = "GREEN" if is_valid else "RED"
+        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{response}"
+
+    @staticmethod
+    def format_imap_log(thread_num, timestamp, server, user, port, is_valid):
+        color = "GREEN" if is_valid else "RED"
+        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{'VALID' if is_valid else 'INVALID'}"
+        
+    @staticmethod
+    def format_socks_log(thread_num, timestamp, proxy_port, result):
+        return f"{thread_num}|{timestamp}|{proxy_port}|{result}"
+
+    @staticmethod
+    def format_url_fetch_log(timestamp, filename, url, size, lines, status):
+        return f"{timestamp}|{filename}|{url}|{size}|{lines}|{status}"
+
+    @staticmethod
+    def format_telegram_fetch_log(timestamp, filename, url, size, lines, status):
+        return f"{timestamp}|{filename}|{url}|{size}|{lines}|{status}"

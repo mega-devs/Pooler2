@@ -284,3 +284,11 @@ if DEBUG:
     import socket
     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
     INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
+
+LOG_FILES = {
+    'smtp': 'app/data/temp_logs/temp_smtp.log',
+    'imap': 'app/data/temp_logs/temp_imap.log', 
+    'socks': 'app/data/temp_logs/socks.log',
+    'url_fetch': 'app/data/temp_logs/url_fetch.log',
+    'telegram_fetch': 'app/data/temp_logs/telegram_fetch.log'
+}

@@ -278,9 +278,76 @@ def check_imap_view(request):
             openapi.Schema(
                 type=openapi.TYPE_OBJECT,
                 properties={
-                    'smtp_logs': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
-                    'imap_logs': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
-                    'n': openapi.Schema(type=openapi.TYPE_INTEGER)
+                    'smtp_logs': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'color': openapi.Schema(type=openapi.TYPE_STRING),
+                                'thread_num': openapi.Schema(type=openapi.TYPE_STRING),
+                                'timestamp': openapi.Schema(type=openapi.TYPE_STRING),
+                                'server': openapi.Schema(type=openapi.TYPE_STRING),
+                                'user': openapi.Schema(type=openapi.TYPE_STRING),
+                                'port': openapi.Schema(type=openapi.TYPE_STRING),
+                                'response': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    ),
+                    'imap_logs': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'color': openapi.Schema(type=openapi.TYPE_STRING),
+                                'thread_num': openapi.Schema(type=openapi.TYPE_STRING),
+                                'timestamp': openapi.Schema(type=openapi.TYPE_STRING),
+                                'server': openapi.Schema(type=openapi.TYPE_STRING),
+                                'user': openapi.Schema(type=openapi.TYPE_STRING),
+                                'port': openapi.Schema(type=openapi.TYPE_STRING),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    ),
+                    'socks_logs': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'thread_num': openapi.Schema(type=openapi.TYPE_STRING),
+                                'timestamp': openapi.Schema(type=openapi.TYPE_STRING),
+                                'proxy_port': openapi.Schema(type=openapi.TYPE_STRING),
+                                'result': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    ),
+                    'url_fetch_logs': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'timestamp': openapi.Schema(type=openapi.TYPE_STRING),
+                                'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                                'url': openapi.Schema(type=openapi.TYPE_STRING),
+                                'size': openapi.Schema(type=openapi.TYPE_STRING),
+                                'lines': openapi.Schema(type=openapi.TYPE_STRING),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    ),
+                    'telegram_logs': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'timestamp': openapi.Schema(type=openapi.TYPE_STRING),
+                                'filename': openapi.Schema(type=openapi.TYPE_STRING),
+                                'url': openapi.Schema(type=openapi.TYPE_STRING),
+                                'size': openapi.Schema(type=openapi.TYPE_STRING),
+                                'lines': openapi.Schema(type=openapi.TYPE_STRING),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    )
                 }
             )
         ),
@@ -298,15 +365,129 @@ def check_imap_view(request):
 @adrf.api_view(['GET'])
 async def get_logs(request):
     """
-    Reads SMTP and IMAP logs from temp log files.
-    
-    Returns logs starting from index 0.
-    Returns a JSON response containing the logs.
+    Retrieves all types of logs with parsed columns for frontend display.
+    Returns structured JSON with separate arrays for each log type.
     """
-    # logs = await read_logs(ind)
+    async def parse_smtp_log(line):
+        try:
+            parts = line.strip().split('|')
+            if len(parts) >= 7:
+                return {
+                    'color': parts[0],
+                    'thread_num': parts[1],
+                    'timestamp': parts[2],
+                    'server': parts[3],
+                    'user': parts[4],
+                    'port': parts[5],
+                    'response': parts[6]
+                }
+            return None
+        except:
+            return None
 
-    logs = await read_logs(0)
-    return JsonResponse({"logs": logs})
+    async def parse_imap_log(line):
+        try:
+            parts = line.strip().split('|')
+            if len(parts) >= 7:
+                return {
+                    'color': parts[0],
+                    'thread_num': parts[1],
+                    'timestamp': parts[2],
+                    'server': parts[3],
+                    'user': parts[4],
+                    'port': parts[5],
+                    'status': parts[6]
+                }
+            return None
+        except:
+            return None
+
+    async def parse_socks_log(line):
+        try:
+            parts = line.strip().split('|')
+            if len(parts) >= 4:
+                return {
+                    'thread_num': parts[0],
+                    'timestamp': parts[1],
+                    'proxy_port': parts[2],
+                    'result': parts[3]
+                }
+            return None
+        except:
+            return None
+
+    async def parse_url_fetch_log(line):
+        try:
+            parts = line.strip().split('|')
+            if len(parts) >= 6:
+                return {
+                    'timestamp': parts[0],
+                    'filename': parts[1],
+                    'url': parts[2],
+                    'size': parts[3],
+                    'lines': parts[4],
+                    'status': parts[5]
+                }
+            return None
+        except:
+            return None
+
+    async def parse_telegram_log(line):
+        try:
+            parts = line.strip().split('|')
+            if len(parts) >= 6:
+                return {
+                    'timestamp': parts[0],
+                    'filename': parts[1],
+                    'url': parts[2],
+                    'size': parts[3],
+                    'lines': parts[4],
+                    'status': parts[5]
+                }
+            return None
+        except:
+            return None
+
+    try:
+        # Read and parse each log file
+        smtp_logs = []
+        imap_logs = []
+        socks_logs = []
+        url_fetch_logs = []
+        telegram_logs = []
+        logs = await read_logs(0)
+
+        async with aiofiles.open(settings.LOG_FILES['smtp'], 'r') as f:
+            lines = await f.readlines()
+            smtp_logs = [log for line in lines if (log := await parse_smtp_log(line)) is not None]
+
+        async with aiofiles.open(settings.LOG_FILES['imap'], 'r') as f:
+            lines = await f.readlines()
+            imap_logs = [log for line in lines if (log := await parse_imap_log(line)) is not None]
+
+        async with aiofiles.open(settings.LOG_FILES['socks'], 'r') as f:
+            lines = await f.readlines()
+            socks_logs = [log for line in lines if (log := await parse_socks_log(line)) is not None]
+
+        async with aiofiles.open(settings.LOG_FILES['url_fetch'], 'r') as f:
+            lines = await f.readlines()
+            url_fetch_logs = [log for line in lines if (log := await parse_url_fetch_log(line)) is not None]
+
+        async with aiofiles.open(settings.LOG_FILES['telegram_fetch'], 'r') as f:
+            lines = await f.readlines()
+            telegram_logs = [log for line in lines if (log := await parse_telegram_log(line)) is not None]
+
+        return JsonResponse({
+            'logs': logs,
+            'smtp_logs': smtp_logs,
+            'imap_logs': imap_logs,
+            'socks_logs': socks_logs,
+            'url_fetch_logs': url_fetch_logs,
+            'telegram_logs': telegram_logs            
+        })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @swagger_auto_schema(
