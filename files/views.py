@@ -8,6 +8,8 @@ from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -118,6 +120,7 @@ logger = logging.getLogger(__name__)
         )
     }
 )
+@cache_page(60 * 2)
 @api_view(['GET'])
 def panel_table(request):
     """Display data with pagination or random selection.
@@ -377,6 +380,7 @@ def download_file(request, filename):
         ),
     }
 )
+@cache_page(60 * 2)
 @api_view(['GET'])
 @login_required
 def uploaded_files_list(request):
@@ -652,6 +656,7 @@ def uploaded_file_delete(request, pk):
         )
     }
 )
+@cache_page(60 * 2)
 @api_view(['GET', 'POST'])
 @login_required
 def download_txt(request):
@@ -935,6 +940,7 @@ class ExtractedDataModelViewSet(viewsets.ModelViewSet):
             """,
         responses={200: ExtractedDataSerializer(many=True)}
     )
+    @method_decorator(cache_page(60 * 2))
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
@@ -961,6 +967,7 @@ class UploadedFileModelViewSet(viewsets.ModelViewSet):
             Use this to retrieve the complete collection of files.""",
         responses={200: UploadedFileSerializer(many=True)}
     )
+    @method_decorator(cache_page(60 * 2))
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
