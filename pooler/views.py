@@ -9,6 +9,7 @@ import requests
 from django.conf import settings
 from django.http import JsonResponse
 from django.urls import reverse_lazy
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from drf_yasg import openapi
@@ -76,6 +77,7 @@ def redirect_to_panel(request):
         )
     }
 )
+@cache_page(60 * 2)
 @api_view(['GET'])
 @require_http_methods(["GET"])
 def panel(request):
@@ -362,6 +364,7 @@ def check_imap_view(request):
         )
     }
 )
+@cache_page(60 * 2)
 @adrf.api_view(['GET'])
 async def get_logs(request):
     """
@@ -613,6 +616,7 @@ def clear_full_logs(request):
         ),
     }
 )
+@cache_page(60 * 2)
 @api_view(['GET'])
 def download_logs_file(request):
     """
