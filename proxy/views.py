@@ -1,3 +1,6 @@
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -13,6 +16,10 @@ class ProxyViewSet(ModelViewSet):
     queryset = Proxy.objects.all()
     serializer_class = ProxySerizalizer
     pagination_class = PageNumberPagination
+
+    @method_decorator(cache_page(60 * 2))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_proxies(self, request):
