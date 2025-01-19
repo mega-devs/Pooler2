@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 
@@ -17,9 +18,28 @@ class ProxyViewSet(ModelViewSet):
     serializer_class = ProxySerizalizer
     pagination_class = PageNumberPagination
 
-    @method_decorator(cache_page(60 * 2))
     def list(self, *args, **kwargs):
-        return super().list(*args, **kwargs)
+        cache_key = 'proxy_list'
+        cached_proxies = cache.get(cache_key)
+
+        if cached_proxies is None:
+            response = super().list(*args, **kwargs)
+            cache.set(cache_key, response.data, 60 * 2)
+            return response
+
+        return Response(cached_proxies)
+
+    def create(self, request, *args, **kwargs):
+        cache.clear()
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        cache.clear()
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        cache.clear()
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_proxies(self, request):
