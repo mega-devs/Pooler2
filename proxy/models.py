@@ -10,3 +10,5 @@ class Proxy(models.Model):
     anonymity = models.CharField(max_length=15, blank=True, null=True)
     timeout = models.PositiveIntegerField(blank=True, null=True)
     last_time_checked = models.DateTimeField()
+    username = models.CharField(max_length=255, blank=True, null=True)
+    password = models.CharField(max_length=255, blank=True, null=True)
