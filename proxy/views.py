@@ -33,6 +33,14 @@ class ProxyViewSet(ModelViewSet):
         cache.clear()
         return super().create(request, *args, **kwargs)
 
+    def update(self, request, *args, **kwargs):
+        cache.clear()
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        cache.clear()
+        return super().destroy(request, *args, **kwargs)
+
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_proxies(self, request):
         serializer = TextFileUploadSerializer(data=request.data)
