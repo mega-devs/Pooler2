@@ -129,6 +129,7 @@ def user_details(request, user_id):
         user = User.objects.get(id=user_id)
 
         user_data = {
+            "id": user.id,
             "username": user.username,
             "email": user.email if hasattr(user, 'email') else None,
             "last_login": user.last_login,
@@ -136,6 +137,7 @@ def user_details(request, user_id):
         return Response(user_data, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)    
+    
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
