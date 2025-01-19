@@ -65,13 +65,21 @@ class ProxyViewSet(ModelViewSet):
             for proxy in proxies:
                 host = proxy.get('host')
                 port = proxy.get('port')
+                username = proxy.get('username', None)
+                password = proxy.get('password', None)
+
                 if host and port is not None:
                     proxy_key = f"{host}:{port}"
 
                     if proxy_key in existing_proxies:
                         errors.append(f"Proxy {proxy_key} already exists.")
                     else:
-                        Proxy.objects.create(host=host, port=int(port))
+                        Proxy.objects.create(
+                            host=host,
+                            port=int(port),
+                            username=username,
+                            password=password
+                        )
                         created_proxies.append(proxy_key)
 
             check_proxy_health.delay()
