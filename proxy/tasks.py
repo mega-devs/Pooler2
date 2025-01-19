@@ -1,3 +1,5 @@
+import datetime
+
 from celery import app
 from .checker import ProxyChecker
 
@@ -22,6 +24,7 @@ def check_proxy_health():
             proxy.country_code = response['country_code']
             proxy.anonymity = response['anonymity']
             proxy.timeout = response['timeout']
+        proxy.last_time_checked = datetime.datetime.now()
         proxy.save()
         return proxy
 
