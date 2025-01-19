@@ -18,8 +18,8 @@ class ProxyViewSet(ModelViewSet):
     pagination_class = PageNumberPagination
 
     @method_decorator(cache_page(60 * 2))
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
+    def list(self, *args, **kwargs):
+        return super().list(*args, **kwargs)
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_proxies(self, request):
