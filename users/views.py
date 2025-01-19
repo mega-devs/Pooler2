@@ -118,16 +118,14 @@ def get_session_by_token(request, token):
     
 
 @api_view(['GET'])
-def user_details(request, token):
+def user_details(request, user_id):
     """
-    API endpoint to retrieve user details by token.
+    API endpoint to retrieve user details by user ID.
 
     Returns the username, email, profile picture URL, and last login time
-    for the user associated with the provided token.
+    for the user associated with the provided user ID.
     """
     try:
-        decoded_token = AccessToken(token)
-        user_id = decoded_token['user_id']
         user = User.objects.get(id=user_id)
 
         user_data = {
@@ -136,9 +134,8 @@ def user_details(request, token):
             "last_login": user.last_login,
         }        
         return Response(user_data, status=status.HTTP_200_OK)
-    except Exception:
-        return Response({"error": "Invalid token"}, status=status.HTTP_401_UNAUTHORIZED)
-    
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)    
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
