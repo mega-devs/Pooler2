@@ -9,3 +9,6 @@ class Proxy(models.Model):
     country_code = models.CharField(max_length=5, blank=True, null=True)
     anonymity = models.CharField(max_length=15, blank=True, null=True)
     timeout = models.PositiveIntegerField(blank=True, null=True)
+    last_time_checked = models.DateTimeField(blank=True, null=True)
+    username = models.CharField(max_length=255, blank=True, null=True)
+    password = models.CharField(max_length=255, blank=True, null=True)
