@@ -1,4 +1,6 @@
 from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.response import Response
@@ -149,6 +151,7 @@ class UserViewSet(viewsets.ModelViewSet):
             Returns a paginated list of user objects.""",
         responses={200: UserSignupSerializer(many=True)}
     )
+    @method_decorator(cache_page(60 * 2))
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
