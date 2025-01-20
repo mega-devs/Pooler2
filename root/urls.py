@@ -61,6 +61,7 @@ urlpatterns = [
    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
    path('prometheus/', include('django_prometheus.urls')),
+   path(r'ht/', include('health_check.urls')),
 ] + router.urls + static(main_settings.MEDIA_URL, document_root=main_settings.MEDIA_ROOT)
 
 if settings.DEBUG:
