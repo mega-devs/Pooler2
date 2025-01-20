@@ -45,6 +45,13 @@ INSTALLED_APPS = [
     'django_prometheus',
     'debug_toolbar',
     'tracking',
+    'health_check',
+    'health_check.db',
+    'health_check.storage',
+    'health_check.contrib.migrations',
+    'health_check.contrib.celery',
+    'health_check.contrib.celery_ping',
+    'health_check.contrib.redis',
 ]
 
 MIDDLEWARE = [
@@ -325,3 +332,5 @@ if env('SENTRY_DSN', default=None):
             DjangoIntegration(),
         ],
     )
+
+REDIS_URL = "redis://redis:6379"
