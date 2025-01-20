@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'health_check.contrib.celery_ping',
     'health_check.contrib.redis',
     'silk',
+    'django_rq',
 ]
 
 MIDDLEWARE = [
@@ -354,4 +355,23 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-outline-success"
     },
     "actions_sticky_top": False
+}
+
+RQ_QUEUES = {
+    'default': {
+        'HOST': 'redis',
+        'PORT': 6379,
+        'DB': 0,
+        'DEFAULT_TIMEOUT': 360,
+    },
+    'high': {
+        'HOST': 'redis',
+        'PORT': 6379,
+        'DB': 0,
+    },
+    'low': {
+        'HOST': 'redis',
+        'PORT': 6379,
+        'DB': 0,
+    }
 }

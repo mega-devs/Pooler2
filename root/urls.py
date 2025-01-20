@@ -63,6 +63,7 @@ urlpatterns = [
    path('prometheus/', include('django_prometheus.urls')),
    path(r'ht/', include('health_check.urls')),
    path('silk/', include('silk.urls', namespace='silk')),
+   path('django-rq/', include('django_rq.urls')),
 ] + router.urls + static(main_settings.MEDIA_URL, document_root=main_settings.MEDIA_ROOT)
 
 if settings.DEBUG:
