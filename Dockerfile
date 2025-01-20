@@ -12,7 +12,9 @@ RUN touch app/data/temp_logs/temp_smtp.log \
          app/data/temp_logs/url_fetch.log \
          app/data/temp_logs/telegram_fetch.log
 
-
 COPY . .
+
+# commands
+RUN mkdir -p coverage_reports
 
 CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
