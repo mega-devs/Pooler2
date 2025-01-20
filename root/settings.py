@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     'files.apps.FilesConfig',
     'proxy.apps.ProxyConfig',
     'telegram.apps.TelegramConfig',
-    'ufw_manager.apps.UfwManagerConfig',
+    'ufw_manager.apps.UfwManagerConfig',    
     'rest_framework',
     'rest_framework_simplejwt',
     'import_export',
@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django_prometheus',
     'debug_toolbar',
     'tracking',
+    'django_mailbox',
     'health_check',
     'health_check.db',
     'health_check.storage',
@@ -167,6 +168,7 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
 AUTH_USER_MODEL = 'users.User'
 LOGIN_URL = 'token_obtain_pair'
 LOGIN_REDIRECT_URL = '/'
@@ -183,10 +185,100 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_ENABLE_UTC = True
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Чтобы избежать перегрузки очередей
-CELERY_TASK_ACKS_LATE = True  # Повторная отправка задачи при сбое
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # To avoid queue overload
+CELERY_TASK_ACKS_LATE = True  # Retry task on failure
 
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
+    'DISPLAY_OPERATION_ID': False,
+    'SUPPORTED_SUBMIT_METHODS': ['get', 'post', 'put', 'delete'],
+    'VALIDATOR_URL': None,
+}
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=90),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+SESSION_COOKIE_AGE = 90 * 60  # 90 minutes
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Django Debug Toolbar
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
+
+if DEBUG:
+    import socket
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
+
+LOG_FILES = {
+    'smtp': 'app/data/temp_logs/temp_smtp.log',
+    'imap': 'app/data/temp_logs/temp_imap.log', 
+    'socks': 'app/data/temp_logs/socks.log',
+    'url_fetch': 'app/data/temp_logs/url_fetch.log',
+    'telegram_fetch': 'app/data/temp_logs/telegram_fetch.log'
+}
+
+# Tracking settings
+TRACK_PAGEVIEWS = True
+TRACK_IGNORE_URLS = ['/favicon.ico']
+TRACK_IGNORE_USER_AGENTS = ['googlebot', 'bot', 'spider', 'crawler']
+TRACK_IGNORE_STATUS_CODES = [400, 404, 403, 405, 410, 500]
+TRACK_USING_GEOIP = True
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": 'redis://redis:6379/1',
+    }
+}
+
+# Sentry
+if env('SENTRY_DSN', default=None):
+    sentry_sdk.init(
+        dsn=env('SENTRY_DSN'),
+        traces_sample_rate=0.2,
+        environment="production",
+        send_default_pii=False,
+        _experiments={
+            "continuous_profiling_auto_start": True,
+        },
+        integrations=[
+            DjangoIntegration(),
+        ],
+    )
+
+# Email settings
+DJANGO_MAILBOX_STORE_ORIGINAL_MESSAGE = True
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env('EMAIL_PORT')  # 587
+EMAIL_USE_TLS = env('EMAIL_USE_TLS')  # True
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+
+REDIS_URL = "redis://redis:6379"
+
+# Admin Panel UI settings
 JAZZMIN_SETTINGS = {
     'site_title': 'Pooler 2',
     'site_header': 'Pooler 2',
@@ -254,83 +346,3 @@ JAZZMIN_UI_TWEAKS = {
     },
     "actions_sticky_top": False
 }
-
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header'
-        }
-    },
-    'USE_SESSION_AUTH': False,
-    'JSON_EDITOR': True,
-    'DISPLAY_OPERATION_ID': False,
-    'SUPPORTED_SUBMIT_METHODS': ['get', 'post', 'put', 'delete'],
-    'VALIDATOR_URL': None,
-}
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
-}
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=90),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
-
-SESSION_COOKIE_AGE = 90 * 60  # 90 minutes
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
-
-# Django Debug Toolbar
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
-
-if DEBUG:
-    import socket
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
-
-LOG_FILES = {
-    'smtp': 'app/data/temp_logs/temp_smtp.log',
-    'imap': 'app/data/temp_logs/temp_imap.log', 
-    'socks': 'app/data/temp_logs/socks.log',
-    'url_fetch': 'app/data/temp_logs/url_fetch.log',
-    'telegram_fetch': 'app/data/temp_logs/telegram_fetch.log'
-}
-
-# Tracking settings
-TRACK_PAGEVIEWS = True
-TRACK_IGNORE_URLS = ['/favicon.ico']
-TRACK_IGNORE_USER_AGENTS = ['googlebot', 'bot', 'spider', 'crawler']
-TRACK_IGNORE_STATUS_CODES = [400, 404, 403, 405, 410, 500]
-TRACK_USING_GEOIP = True
-
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": 'redis://redis:6379/1',
-    }
-}
-# Sentry
-if env('SENTRY_DSN', default=None):
-    sentry_sdk.init(
-        dsn=env('SENTRY_DSN'),
-        traces_sample_rate=0.2,
-        environment="production",
-        send_default_pii=False,
-        _experiments={
-            "continuous_profiling_auto_start": True,
-        },
-        integrations=[
-            DjangoIntegration(),
-        ],
-    )
-
-REDIS_URL = "redis://redis:6379"

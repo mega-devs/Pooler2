@@ -164,3 +164,8 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
+
+@api_view(['GET'])
+def sentry_checking(request):
+    lil_error = 1 / 0
+    return JsonResponse({"message": "testing error"})

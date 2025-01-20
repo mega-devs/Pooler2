@@ -9,4 +9,5 @@ urlpatterns = [
     path('logout/', views.custom_logout_view),
     path('session/token/<str:token>/', views.get_session_by_token, name='get_session_by_token'),
     path('details/<int:user_id>/', views.user_details, name='user_details'),
+    path('debug-sentry/', views.sentry_checking, name='debug-sentry'),
 ]
