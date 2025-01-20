@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'health_check.contrib.celery',
     'health_check.contrib.celery_ping',
     'health_check.contrib.redis',
+    'silk',
 ]
 
 MIDDLEWARE = [
@@ -60,6 +61,7 @@ MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'silk.middleware.SilkyMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -277,6 +279,13 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 REDIS_URL = "redis://redis:6379"
+
+# Silk settings
+SILKY_PYTHON_PROFILER = True
+SILKY_AUTHENTICATION = True  # requiring login
+SILKY_AUTHORISATION = True   # authorization
+SILKY_MAX_REQUEST_LOG_SIZE = 10 * 1024 * 1024
+SILKY_MAX_RESPONSE_LOG_SIZE = 10 * 1024 * 1024
 
 # Admin Panel UI settings
 JAZZMIN_SETTINGS = {
