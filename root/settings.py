@@ -311,17 +311,17 @@ CACHES = {
         "LOCATION": 'redis://redis:6379/1',
     }
 }
-
 # Sentry
-sentry_sdk.init(
-    dsn=env('SENTRY_DSN'),
-    traces_sample_rate=0.2,
-    environment="production",
-    send_default_pii=False,
-    _experiments={
-        "continuous_profiling_auto_start": True,
-    },
-    integrations=[
-        DjangoIntegration(),
-    ],
-)
+if env('SENTRY_DSN', default=None):
+    sentry_sdk.init(
+        dsn=env('SENTRY_DSN'),
+        traces_sample_rate=0.2,
+        environment="production",
+        send_default_pii=False,
+        _experiments={
+            "continuous_profiling_auto_start": True,
+        },
+        integrations=[
+            DjangoIntegration(),
+        ],
+    )
