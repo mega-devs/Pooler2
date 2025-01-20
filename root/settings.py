@@ -272,13 +272,13 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=90),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-SESSION_COOKIE_AGE = 60 * 60  # one hour in seconds
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 90 * 60  # 90 minutes
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 # Django Debug Toolbar
 INTERNAL_IPS = [
@@ -314,7 +314,7 @@ CACHES = {
 
 # Sentry
 sentry_sdk.init(
-    dsn="***",
+    dsn=env('SENTRY_DSN'),
     traces_sample_rate=0.2,
     environment="production",
     send_default_pii=False,
