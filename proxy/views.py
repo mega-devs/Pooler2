@@ -1,6 +1,4 @@
 from django.core.cache import cache
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 
 from rest_framework import status
 from rest_framework.decorators import action
@@ -11,12 +9,19 @@ from rest_framework.viewsets import ModelViewSet
 from .models import Proxy
 from .serializers import ProxySerizalizer, TextFileUploadSerializer
 from .tasks import check_proxy_health
+from .utils import check_single_proxy
 
 
 class ProxyViewSet(ModelViewSet):
     queryset = Proxy.objects.all()
     serializer_class = ProxySerizalizer
     pagination_class = PageNumberPagination
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        proxy = check_single_proxy(instance)
+        serializer = self.get_serializer(proxy)
+        return Response(serializer.data)
 
     def list(self, *args, **kwargs):
         cache_key = 'proxy_list'
