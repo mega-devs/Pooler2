@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     'health_check.contrib.redis',
     'silk',
     'django_rq',
+    'constance',
+    'constance.backends.database',
 ]
 
 MIDDLEWARE = [
@@ -374,4 +376,22 @@ RQ_QUEUES = {
         'PORT': 6379,
         'DB': 0,
     }
+}
+# Constance settings
+CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
+
+CONSTANCE_CONFIG = {
+    'SITE_NAME': ('Pooler 2', 'Website name'),
+    'MAINTENANCE_MODE': (False, 'Put site in maintenance mode'),
+    'MAX_CONCURRENT_TASKS': (5, 'Maximum number of concurrent tasks'),
+    'TELEGRAM_FETCH_INTERVAL': (300, 'Telegram fetch interval in seconds'),
+    'EMAIL_FETCH_BATCH_SIZE': (100, 'Number of emails to fetch in one batch'),
+    'PROXY_CHECK_TIMEOUT': (10, 'Proxy check timeout in seconds'),
+}
+
+CONSTANCE_CONFIG_FIELDSETS = {
+    'General Settings': ('SITE_NAME', 'MAINTENANCE_MODE'),
+    'Task Settings': ('MAX_CONCURRENT_TASKS',),
+    'Fetch Settings': ('TELEGRAM_FETCH_INTERVAL', 'EMAIL_FETCH_BATCH_SIZE'),
+    'Proxy Settings': ('PROXY_CHECK_TIMEOUT',),
 }
