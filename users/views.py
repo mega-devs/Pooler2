@@ -124,8 +124,8 @@ def user_details(request, user_id):
     """
     API endpoint to retrieve user details by user ID.
 
-    Returns the username, email, profile picture URL, and last login time
-    for the user associated with the provided user ID.
+    Returns the username, email, profile picture URL, last login time,
+    and user role for the user associated with the provided user ID.
     """
     try:
         user = User.objects.get(id=user_id)
@@ -135,11 +135,12 @@ def user_details(request, user_id):
             "username": user.username,
             "email": user.email if hasattr(user, 'email') else None,
             "last_login": user.last_login,
+            "role": "admin" if user.is_superuser else "staff" if user.is_staff else "user"
         }        
         return Response(user_data, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)    
-    
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
