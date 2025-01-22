@@ -60,7 +60,7 @@ class ProxyChecker:
         }
 
     def parse_anonymity(self, r):
-        if self.ip in r:
+        if self.ip and self.ip in r:
             return 'Transparent'
 
         privacy_headers = [

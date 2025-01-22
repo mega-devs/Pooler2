@@ -12,3 +12,6 @@ class Proxy(models.Model):
     last_time_checked = models.DateTimeField(blank=True, null=True)
     username = models.CharField(max_length=255, blank=True, null=True)
     password = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.host}:{self.port}"
