@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
-from files.models import ExtractedData
+from files.models import ExtractedData, UploadedFile
 from unittest.mock import patch
 
 
@@ -30,9 +30,26 @@ class PoolerViewsTestCase(APITestCase):
         """
         Test that panel view returns the correct statistics.
         """
-        # Create some sample data
-        ExtractedData.objects.create(smtp_is_valid=True, imap_is_valid=True)
-        ExtractedData.objects.create(smtp_is_valid=False, imap_is_valid=False)
+        uploaded_file = UploadedFile.objects.create(
+            filename="test.txt",
+            file_path="/test/path",
+            user=self.user)
+
+        ExtractedData.objects.create(
+            smtp_is_valid=True, 
+            imap_is_valid=True,
+            uploaded_file=uploaded_file,
+            provider="test.com",
+            email="test1@test.com",
+            password="pass123")
+        
+        ExtractedData.objects.create(
+            smtp_is_valid=False, 
+            imap_is_valid=False,
+            uploaded_file=uploaded_file,
+            provider="test.com", 
+            email="test2@test.com",
+            password="pass456")
 
         url = reverse('pooler:panel')
         response = self.client.get(url)
@@ -53,7 +70,6 @@ class PoolerViewsTestCase(APITestCase):
         for key in expected_keys:
             self.assertIn(key, data)
 
-        # Verify counts
         self.assertEqual(data['count_of_smtp_valid'], 1)
         self.assertEqual(data['count_of_smtp_invalid'], 1)
         self.assertEqual(data['count_of_imap'], 2)
@@ -64,6 +80,7 @@ class PoolerViewsTestCase(APITestCase):
         """
         Test GET request to panel_settings returns active_page as 'settings'.
         """
+        self.client.force_authenticate(user=self.user)
         url = reverse('pooler:panel_settings')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -74,6 +91,7 @@ class PoolerViewsTestCase(APITestCase):
         """
         Test POST request to panel_settings returns active_page as 'settings'.
         """
+        self.client.force_authenticate(user=self.user)        
         url = reverse('pooler:panel_settings')
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -108,7 +126,7 @@ class PoolerViewsTestCase(APITestCase):
         url = reverse('pooler:upload_file_by_url')
         with patch('pooler.views.requests.get') as mock_get:
             mock_get.return_value.status_code = 404
-            response = self.client.post(url, data={'url': 'http://example.com/nonexistent.txt'})
+            response = self.client.post(url, data={'url': 'http://smth.com/none.txt'})
             self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
             self.assertEqual(response.json().get('error'), 'File not found')
 
@@ -116,9 +134,12 @@ class PoolerViewsTestCase(APITestCase):
         """
         Test that check_smtp_view runs successfully.
         """
-        url = reverse('pooler:check_smtp_view')
+        url = reverse('pooler:checking_smtp')
         with patch('pooler.views.check_smtp_emails_from_db') as mock_task:
-            mock_task.return_value = None
+            async def mock_coro():
+                return None
+            mock_task.return_value = mock_coro()
+            
             response = self.client.get(url)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.json().get('status'), 'success')
@@ -127,9 +148,12 @@ class PoolerViewsTestCase(APITestCase):
         """
         Test that check_imap_view runs successfully.
         """
-        url = reverse('pooler:check_imap_view')
+        url = reverse('pooler:checking_imap')
         with patch('pooler.views.check_imap_emails_from_db') as mock_task:
-            mock_task.return_value = None
+            async def testing():
+                return None
+            mock_task.return_value = testing()
+            
             response = self.client.get(url)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.json().get('status'), 'success')
@@ -180,6 +204,11 @@ class PoolerViewsTestCase(APITestCase):
 # for testing pooler/utils.py
 class PoolerUtilsTestCase(APITestCase):
     def setUp(self):
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpassword')
+        
         self.sample_email = "test@example.com"
         self.sample_password = "testpass123"
         self.sample_server = "smtp.example.com"
@@ -205,16 +234,22 @@ class PoolerUtilsTestCase(APITestCase):
 
     def test_get_email_bd_data(self):
         """Test retrieval of email data from database"""
-        # Create test data
+        uploaded_file = UploadedFile.objects.create(
+            filename="test.txt",
+            file_path="/test/path",
+            user=self.user)
+
         ExtractedData.objects.create(
             provider="smtp.test.com",
-            email="test1@test.com",
-            password="pass123"
+            email="test1@test.com", 
+            password="pass123",
+            uploaded_file=uploaded_file
         )
         ExtractedData.objects.create(
             provider="smtp.example.com",
             email="test2@example.com",
-            password="pass456"
+            password="pass456",
+            uploaded_file=uploaded_file
         )
         
         result = get_email_bd_data()
@@ -226,12 +261,10 @@ class PoolerUtilsTestCase(APITestCase):
     def test_imap_check(self):
         """Test IMAP connection checker"""
         with patch('imaplib.IMAP4_SSL') as mock_imap:
-            # Test successful connection
             mock_imap.return_value.login.return_value = True
             result = imapCheck(self.sample_email, self.sample_password, self.sample_server)
             self.assertTrue(result)
 
-            # Test failed connection
             mock_imap.side_effect = Exception("Connection failed")
             result = imapCheck(self.sample_email, self.sample_password, self.sample_server)
             self.assertFalse(result)
@@ -244,7 +277,6 @@ class PoolerUtilsTestCase(APITestCase):
         user = "test@test.com"
         port = 587
         
-        # Test SMTP log formatting
         smtp_log = LogFormatter.format_smtp_log(
             thread_num=thread_num,
             timestamp=timestamp,
@@ -257,7 +289,6 @@ class PoolerUtilsTestCase(APITestCase):
         self.assertIn("GREEN", smtp_log)
         self.assertIn(thread_num, smtp_log)
         
-        # Test IMAP log formatting
         imap_log = LogFormatter.format_imap_log(
             thread_num=thread_num,
             timestamp=timestamp,
