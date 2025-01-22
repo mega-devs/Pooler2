@@ -1,3 +1,5 @@
+import asyncio
+
 import aiofiles
 import imaplib
 import io
@@ -420,22 +422,6 @@ async def check_smtp_emails_from_db():
 
     for el in smtp_results:
         ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
-
-
-@app.task
-async def check_imap_emails_from_db():
-    '''Основная функция, запускает подфункцию imap_process_chank from_db'''
-    # smtp_driver = SmtpDriver()
-    imap_results = []
-
-    data = get_email_bd_data()
-
-    tasks = [process_chunk_from_db(el, imap_results) for el in
-             data]
-    await gather(*tasks)
-
-    for el in imap_results:
-        ExtractedData.objects.filter(email=el['email']).update(imap_is_valid=el['status'])
 
 
 async def read_logs(ind):
