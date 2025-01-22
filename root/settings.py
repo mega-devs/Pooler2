@@ -398,4 +398,4 @@ CONSTANCE_CONFIG_FIELDSETS = {
 }
 
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-DBBACKUP_STORAGE_OPTIONS = {'location': '/backup/'}
+DBBACKUP_STORAGE_OPTIONS = {'location': '/app/backup/'}
