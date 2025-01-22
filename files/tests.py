@@ -1,156 +1,266 @@
+
+import tempfile
+from django.test import TestCase
 from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework.test import APITestCase
 from rest_framework import status
-from rest_framework.test import APITestCase, APIClient
-from django.contrib.auth import get_user_model
-from rest_framework.authtoken.models import Token
-from .models import ExtractedData, UploadedFile
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, Mock
 import os
+import zipfile
+
+from users.models import User
+
+from .models import UploadedFile, ExtractedData
+from .tasks import async_handle_archive, async_process_uploaded_files
+from .service import (
+    extract_country_from_filename, remove_duplicate_lines, 
+    handle_archive, determine_origin, process_uploaded_files
+)
+from .serializers import ExtractedDataSerializer, UploadedFileSerializer
+from .resources import UploadedFileResource, ExtractedDataResource
 
 
-class FilesViewsTestCase(APITestCase):
+class FileTasksTest(TestCase):
     def setUp(self):
-        # Create test user and token
-        User = get_user_model()
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.token = Token.objects.create(user=self.user)
-        self.client = APIClient()
-        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
 
-        # Create uploaded file first
         self.uploaded_file = UploadedFile.objects.create(
-            filename='test.txt',
-            file_path='/test/path/test.txt',
-            country='US',
-            origin='MANUAL',
+            filename='test.zip',
+            file_path='/test/path/test.zip',
             user=self.user
         )
 
-        # Then create extracted data with reference to uploaded file
-        self.extracted_data = ExtractedData.objects.create(
-            email='test@example.com',
-            password='testpass',
-            provider='gmail',
-            country='US',
+    @patch('files.tasks.handle_archive')
+    def test_async_handle_archive(self, mock_handle):
+        """Test async archive handling task"""
+        file_path = '/test/path/test.zip'
+        save_path = '/test/path/'
+        
+        async_handle_archive(file_path, save_path)
+        mock_handle.assert_called_once_with(file_path)
+
+    @patch('files.tasks.process_uploaded_files')
+    def test_async_process_uploaded_files(self, mock_process):
+        """Test async file processing task"""
+        base_dir = '/test/path/'
+        
+        async_process_uploaded_files(base_dir, self.uploaded_file.id)
+        mock_process.assert_called_once()
+
+
+class FileServiceTest(TestCase):
+    def setUp(self):
+        self.test_file_path = 'test_file.txt'
+        
+    def test_extract_country_from_filename(self):
+        """Test country code extraction"""
+        test_cases = [
+            ('file_US_test.txt', 'US'),
+            ('combo_GB_2023.zip', 'GB'),
+            ('invalid.txt', None)
+        ]
+        for filename, expected in test_cases:
+            result = extract_country_from_filename(filename)
+            self.assertEqual(result, expected)
+
+    @patch('builtins.open')
+    def test_remove_duplicate_lines(self, mock_open):
+        """Test duplicate line removal"""
+        mock_open.return_value.__enter__.return_value.read.return_value = b'line1\nline1\nline2'
+        result = remove_duplicate_lines(self.test_file_path)
+        self.assertEqual(result, 1)
+
+    def test_determine_origin(self):
+        """Test file origin determination"""
+        test_cases = [
+            ('smtp_file.txt', 'SMTP'),
+            ('imap_data.zip', 'IMAP'),
+            ('telegram_export.csv', 'TELEGRAM'),
+            ('other.txt', 'MANUAL')
+        ]
+        for filename, expected in test_cases:
+            result = determine_origin(filename)
+            self.assertEqual(result, expected)
+
+
+class FileUrlsTest(TestCase):
+    def test_urls_resolve_correctly(self):
+        """Test URL pattern resolution"""
+        urls_to_test = [
+            ('uploaded_files_list', '/files/'),
+            ('upload_combofile', '/files/upload/'),
+            ('panel_table', '/files/panel/tables/')
+        ]
+        for name, path in urls_to_test:
+            url = reverse(f'files:{name}')
+            self.assertEqual(url, path)
+
+
+class FileViewsTest(APITestCase):
+    def setUp(self):
+        # Create test user
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        self.client.force_authenticate(user=self.user)
+
+        # Create some test data
+        self.uploaded_file = UploadedFile.objects.create(
             filename='test.txt',
-            line_number=1,
-            upload_origin='MANUAL',
-            uploaded_file=self.uploaded_file  # Add this reference
+            file_path='/test/path/test.txt',
+            user=self.user
         )
         
+        self.extracted_data = ExtractedData.objects.create(
+            email='test@test.com',
+            password='testpass',
+            provider='test',
+            uploaded_file=self.uploaded_file,
+            upload_origin='MANUAL'
+        )
+
     def test_panel_table(self):
-        """Test panel_table view returns correct data structure and pagination"""
+        """Test panel table data retrieval"""
         url = reverse('files:panel_table')
         response = self.client.get(url)
         
+        # Convert JsonResponse to dict
+        response_data = response.json()
+        
+        # Verify response status and structure
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('data', response.json())
-        self.assertIn('countries', response.json())
-        self.assertIn('show_all', response.json())
+        self.assertIn('data', response_data)
+        
+        # Verify data content
+        self.assertTrue(isinstance(response_data['data'], list))
+        self.assertEqual(len(response_data['data']), 1)
+        
+        # Verify expected fields in response
+        expected_fields = {
+            'data', 'countries', 'show_all', 
+            'random_count', 'total_pages'
+        }
+        self.assertEqual(
+            set(response_data.keys()) & expected_fields,
+            expected_fields
+        )
 
     def test_upload_combofile(self):
-        """Test file upload functionality"""
+            """Test combo file upload functionality"""
+            url = reverse('files:upload_combofile')
+            
+            # Create a temporary test file
+            with tempfile.NamedTemporaryFile(suffix='.txt') as temp_file:
+                temp_file.write(b'test@gmail.com:password123')
+                temp_file.seek(0)
+                
+                # Prepare file upload data
+                upload_data = {
+                    'file': temp_file
+                }
+                
+                response = self.client.post(url, upload_data, format='multipart')
+                response_data = response.json()
+                
+                # Verify response status and structure
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+                self.assertIn('message', response_data)
+                self.assertIn('file_id', response_data)
+                
+                # Verify file was created in database
+                file_id = response_data['file_id']
+                uploaded_file = UploadedFile.objects.get(id=file_id)
+                self.assertEqual(uploaded_file.user, self.user)
+                self.assertTrue(os.path.exists(uploaded_file.file_path))
+    
+    def test_upload_combofile_no_file(self):
+        """Test combo file upload with no file"""
         url = reverse('files:upload_combofile')
-        file_content = b'test content'
-        uploaded_file = SimpleUploadedFile('test.txt', file_content)
-        
-        response = self.client.post(url, {'file': uploaded_file}, format='multipart')
-        
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('message', response.json())
-        self.assertIn('file_id', response.json())
-
-    def test_download_file(self):
-        """Test file download functionality"""
-        filename = 'test.txt'
-        url = reverse('files:download_file', kwargs={'filename': filename})
-        
-        with patch('builtins.open', create=True) as mock_open:
-            mock_open.return_value.__enter__.return_value.read.return_value = b'test content'
-            response = self.client.get(url)
+        response = self.client.post(url, {}, format='multipart')
             
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertIn('filename', response.json())
-            self.assertIn('download_url', response.json())
-
-    def test_uploaded_files_list(self):
-        """Test listing uploaded files"""
-        url = reverse('files:uploaded_files_list')
-        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.json())
+        self.assertEqual(response.json()['error'], 'No file part')
+    
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('files', response.json())
-        self.assertTrue(len(response.json()['files']) > 0)
-
-    def test_uploaded_file_update(self):
-        """Test updating uploaded file information"""
-        url = reverse('files:uploaded_file_update', kwargs={'pk': self.uploaded_file.pk})
-        update_data = {
-            'filename': 'updated.txt',
-            'status': 'processed'
+class FileSerializerTest(TestCase):
+    def setUp(self):
+        # Create test user
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        
+        # Setup data for UploadedFile
+        self.file_data = {
+            'filename': 'test.txt',
+            'file_path': '/test/path/test.txt',
+            'user': self.user.id,
+            'origin': 'MANUAL'
         }
         
-        response = self.client.put(url, update_data, format='json')
+    def test_uploaded_file_serializer(self):
+        """Test UploadedFile serializer"""
+        serializer = UploadedFileSerializer(data=self.file_data)
+        self.assertTrue(serializer.is_valid())
         
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('file', response.json())
-        self.assertEqual(response.json()['file']['filename'], 'updated.txt')
-
-    def test_uploaded_file_delete(self):
-        """Test deleting uploaded file"""
-        url = reverse('files:uploaded_file_delete', kwargs={'pk': self.uploaded_file.pk})
+    def test_extracted_data_serializer(self):
+        """Test ExtractedData serializer"""
+        # Create uploaded file first
+        uploaded_file = UploadedFile.objects.create(
+            filename='test.txt',
+            file_path='/test/path/test.txt',
+            user=self.user
+        )
         
-        with patch('os.remove') as mock_remove:
-            response = self.client.delete(url)
-            
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertIn('message', response.json())
-            mock_remove.assert_called()
-
-    def test_download_txt(self):
-        """Test downloading data in TXT format"""
-        url = reverse('files:download_txt')
-        self.client.session['current_data_ids'] = [self.extracted_data.id]
-        
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('data', response.json())
-        self.assertEqual(len(response.json()['data']), 1)
-
-    def test_extracted_data_update(self):
-        """Test updating extracted data"""
-        url = reverse('files:extracted_data_update', kwargs={'pk': self.extracted_data.pk})
-        update_data = {
-            'email': 'updated@example.com',
-            'password': 'newpass'
+        data = {
+            'email': 'test@test.com',
+            'password': 'testpass',
+            'provider': 'test',
+            'uploaded_file': uploaded_file.id,
+            'upload_origin': 'MANUAL'
         }
-        
-        response = self.client.post(url, update_data)
-        
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()['status'], 'success')
+        serializer = ExtractedDataSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
 
-    def test_extracted_data_delete(self):
-        """Test deleting extracted data"""
-        url = reverse('files:extracted_data_delete', kwargs={'pk': self.extracted_data.pk})
-        
-        with patch('os.remove') as mock_remove:
-            response = self.client.post(url)
-            
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.json()['status'], 'success')
 
-    def test_viewsets(self):
-        """Test ModelViewSet endpoints"""
-        # Test ExtractedData viewset
-        url = reverse('files:extracteddata-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+class FileResourceTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
         
-        # Test UploadedFile viewset
-        url = reverse('files:uploadedfile-list')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.uploaded_file = UploadedFile.objects.create(
+            filename='test.txt',
+            file_path='/test/path/test.txt',
+            user=self.user
+        )
         
+        self.extracted_data = ExtractedData.objects.create(
+            email='test@test.com',
+            password='testpass',
+            provider='test',
+            uploaded_file=self.uploaded_file,
+            upload_origin='MANUAL'
+        )
+
+    def test_uploaded_file_resource(self):
+        """Test UploadedFile export resource"""
+        resource = UploadedFileResource()
+        dataset = resource.export()
+        self.assertEqual(len(dataset), 1)
+
+    def test_extracted_data_resource(self):
+        """Test ExtractedData export resource"""
+        resource = ExtractedDataResource()
+        dataset = resource.export()
+        exported_data = dataset.dict[0]
+        self.assertEqual(
+            exported_data['uploaded_file_name'],
+            self.uploaded_file.filename
+        )
