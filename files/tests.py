@@ -33,6 +33,11 @@ class FileTasksTest(TestCase):
             user=self.user
         )
 
+        # Create a zip archive if it doesn't exist
+        if not os.path.exists(self.uploaded_file.file_path):
+            with zipfile.ZipFile(self.uploaded_file.file_path, 'w') as zipf:
+                zipf.writestr('test.txt', 'This is a test file.')
+
     @patch('files.tasks.handle_archive')
     def test_async_handle_archive(self, mock_handle):
         """Test async archive handling task"""
@@ -150,32 +155,32 @@ class FileViewsTest(APITestCase):
         )
 
     def test_upload_combofile(self):
-            """Test combo file upload functionality"""
-            url = reverse('files:upload_combofile')
+        """Test combo file upload functionality"""
+        url = reverse('files:upload_combofile')
+        
+        # Create a temporary test file
+        with tempfile.NamedTemporaryFile(suffix='.txt') as temp_file:
+            temp_file.write(b'test@gmail.com:password123')
+            temp_file.seek(0)
             
-            # Create a temporary test file
-            with tempfile.NamedTemporaryFile(suffix='.txt') as temp_file:
-                temp_file.write(b'test@gmail.com:password123')
-                temp_file.seek(0)
-                
-                # Prepare file upload data
-                upload_data = {
-                    'file': temp_file
-                }
-                
-                response = self.client.post(url, upload_data, format='multipart')
-                response_data = response.json()
-                
-                # Verify response status and structure
-                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-                self.assertIn('message', response_data)
-                self.assertIn('file_id', response_data)
-                
-                # Verify file was created in database
-                file_id = response_data['file_id']
-                uploaded_file = UploadedFile.objects.get(id=file_id)
-                self.assertEqual(uploaded_file.user, self.user)
-                self.assertTrue(os.path.exists(uploaded_file.file_path))
+            # Prepare file upload data
+            upload_data = {
+                'file': temp_file
+            }
+            
+            response = self.client.post(url, upload_data, format='multipart')
+            response_data = response.json()
+            
+            # Verify response status and structure
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertIn('message', response_data)
+            self.assertIn('file_id', response_data)
+            
+            # Verify file was created in database
+            file_id = response_data['file_id']
+            uploaded_file = UploadedFile.objects.get(id=file_id)
+            self.assertEqual(uploaded_file.user, self.user)
+            self.assertTrue(os.path.exists(uploaded_file.file_path))
     
     def test_upload_combofile_no_file(self):
         """Test combo file upload with no file"""
