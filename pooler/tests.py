@@ -1,13 +1,14 @@
 from django.urls import reverse
+from pooler.utils import LogFormatter, chunks, extract_country_from_filename, get_email_bd_data, imapCheck, read_logs
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
 from files.models import ExtractedData
 from unittest.mock import patch
-import json
 
 
+# for testing pooler/views.py
 class PoolerViewsTestCase(APITestCase):
     def setUp(self):
         User = get_user_model()
@@ -24,6 +25,7 @@ class PoolerViewsTestCase(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('redirect', response.json())
+
     def test_panel(self):
         """
         Test that panel view returns the correct statistics.
@@ -173,3 +175,108 @@ class PoolerViewsTestCase(APITestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertIn('smtp', response.json())
             self.assertIn('imap', response.json())
+
+
+# for testing pooler/utils.py
+class PoolerUtilsTestCase(APITestCase):
+    def setUp(self):
+        self.sample_email = "test@example.com"
+        self.sample_password = "testpass123"
+        self.sample_server = "smtp.example.com"
+
+    def test_chunks_function(self):
+        """Test the chunks utility function"""
+        test_list = [1, 2, 3, 4, 5, 6, 7]
+        chunk_size = 3
+        result = list(chunks(test_list, chunk_size))
+        self.assertEqual(result, [[1, 2, 3], [4, 5, 6], [7]])
+
+    def test_extract_country_from_filename(self):
+        """Test country code extraction from filename"""
+        test_cases = [
+            ("combo_US_2023.txt", "US"),
+            ("emails_GB_valid.zip", "GB"),
+            ("test_FR_123.csv", "FR"),
+            ("invalid_filename.txt", None)
+        ]
+        for filename, expected in test_cases:
+            result = extract_country_from_filename(filename)
+            self.assertEqual(result, expected)
+
+    def test_get_email_bd_data(self):
+        """Test retrieval of email data from database"""
+        # Create test data
+        ExtractedData.objects.create(
+            provider="smtp.test.com",
+            email="test1@test.com",
+            password="pass123"
+        )
+        ExtractedData.objects.create(
+            provider="smtp.example.com",
+            email="test2@example.com",
+            password="pass456"
+        )
+        
+        result = get_email_bd_data()
+        self.assertEqual(len(result), 2)
+        self.assertTrue(all(
+            key in result[0] for key in ['smtp_server', 'email', 'password']
+        ))
+
+    def test_imap_check(self):
+        """Test IMAP connection checker"""
+        with patch('imaplib.IMAP4_SSL') as mock_imap:
+            # Test successful connection
+            mock_imap.return_value.login.return_value = True
+            result = imapCheck(self.sample_email, self.sample_password, self.sample_server)
+            self.assertTrue(result)
+
+            # Test failed connection
+            mock_imap.side_effect = Exception("Connection failed")
+            result = imapCheck(self.sample_email, self.sample_password, self.sample_server)
+            self.assertFalse(result)
+
+    def test_log_formatter(self):
+        """Test log formatting utilities"""
+        thread_num = "Thread-1"
+        timestamp = "2023-01-01 12:00:00"
+        server = "smtp.test.com"
+        user = "test@test.com"
+        port = 587
+        
+        # Test SMTP log formatting
+        smtp_log = LogFormatter.format_smtp_log(
+            thread_num=thread_num,
+            timestamp=timestamp,
+            server=server,
+            user=user,
+            port=port,
+            response="250 OK",
+            is_valid=True
+        )
+        self.assertIn("GREEN", smtp_log)
+        self.assertIn(thread_num, smtp_log)
+        
+        # Test IMAP log formatting
+        imap_log = LogFormatter.format_imap_log(
+            thread_num=thread_num,
+            timestamp=timestamp,
+            server=server,
+            user=user,
+            port=port,
+            is_valid=True
+        )
+        self.assertIn("GREEN", imap_log)
+        self.assertIn("VALID", imap_log)
+
+    async def test_read_logs(self):
+        """Test log reading functionality"""
+        with patch('aiofiles.open') as mock_open:
+            mock_open.return_value.__aenter__.return_value.readlines.return_value = [
+                "log line 1\n",
+                "log line 2\n"
+            ]
+            result = await read_logs(0)
+            self.assertIn('smtp_logs', result)
+            self.assertIn('imap_logs', result)
+            self.assertEqual(result['n'], 2)
