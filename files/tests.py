@@ -66,7 +66,7 @@ class FileTasksTest(TestCase):
         base_dir = self.temp_dir
 
         async_process_uploaded_files(base_dir, self.uploaded_file.id)
-        mock_process.assert_called_once_with(base_dir, self.uploaded_file.id)
+        mock_process.assert_called_once_with(base_dir, self.uploaded_file)
 
 
 class FileServiceTest(TestCase):
