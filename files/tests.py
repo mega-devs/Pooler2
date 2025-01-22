@@ -22,38 +22,51 @@ from .resources import UploadedFileResource, ExtractedDataResource
 
 class FileTasksTest(TestCase):
     def setUp(self):
+        # Create a temporary directory
+        self.temp_dir = tempfile.mkdtemp()
         self.user = User.objects.create_user(
             username='testuser',
             password='testpass123'
         )
 
+        # Define paths
+        self.file_path = os.path.join(self.temp_dir, 'test.zip')
         self.uploaded_file = UploadedFile.objects.create(
             filename='test.zip',
-            file_path='/test/path/test.zip',
+            file_path=self.file_path,
             user=self.user
         )
 
-        # Create a zip archive if it doesn't exist
-        if not os.path.exists(self.uploaded_file.file_path):
-            with zipfile.ZipFile(self.uploaded_file.file_path, 'w') as zipf:
-                zipf.writestr('test.txt', 'This is a test file.')
+        # Create a zip archive in the temp directory
+        with zipfile.ZipFile(self.file_path, 'w') as zipf:
+            zipf.writestr('test.txt', 'This is a test file.')
+
+    def tearDown(self):
+        # Cleanup temporary directory
+        if os.path.exists(self.temp_dir):
+            for root, dirs, files in os.walk(self.temp_dir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(self.temp_dir)
 
     @patch('files.tasks.handle_archive')
     def test_async_handle_archive(self, mock_handle):
-        """Test async archive handling task"""
-        file_path = '/test/path/test.zip'
-        save_path = '/test/path/'
+        """Test async archive handling task."""
+        file_path = self.file_path
+        save_path = self.temp_dir
         
         async_handle_archive(file_path, save_path)
         mock_handle.assert_called_once_with(file_path)
 
     @patch('files.tasks.process_uploaded_files')
     def test_async_process_uploaded_files(self, mock_process):
-        """Test async file processing task"""
-        base_dir = '/test/path/'
-        
+        """Test async file processing task."""
+        base_dir = self.temp_dir
+
         async_process_uploaded_files(base_dir, self.uploaded_file.id)
-        mock_process.assert_called_once()
+        mock_process.assert_called_once_with(base_dir, self.uploaded_file.id)
 
 
 class FileServiceTest(TestCase):
@@ -106,6 +119,9 @@ class FileUrlsTest(TestCase):
 
 class FileViewsTest(APITestCase):
     def setUp(self):
+        # Create a temporary directory
+        self.temp_dir = tempfile.mkdtemp()
+
         # Create test user
         self.user = User.objects.create_user(
             username='testuser',
@@ -114,9 +130,13 @@ class FileViewsTest(APITestCase):
         self.client.force_authenticate(user=self.user)
 
         # Create some test data
+        self.file_path = os.path.join(self.temp_dir, 'test.txt')
+        with open(self.file_path, 'w') as f:
+            f.write('Sample test file content.')
+
         self.uploaded_file = UploadedFile.objects.create(
             filename='test.txt',
-            file_path='/test/path/test.txt',
+            file_path=self.file_path,
             user=self.user
         )
         
@@ -128,8 +148,18 @@ class FileViewsTest(APITestCase):
             upload_origin='MANUAL'
         )
 
+    def tearDown(self):
+        # Cleanup temporary directory
+        if os.path.exists(self.temp_dir):
+            for root, dirs, files in os.walk(self.temp_dir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(self.temp_dir)
+
     def test_panel_table(self):
-        """Test panel table data retrieval"""
+        """Test panel table data retrieval."""
         url = reverse('files:panel_table')
         response = self.client.get(url)
         
@@ -149,13 +179,13 @@ class FileViewsTest(APITestCase):
             'data', 'countries', 'show_all', 
             'random_count', 'total_pages'
         }
-        self.assertEqual(
-            set(response_data.keys()) & expected_fields,
-            expected_fields
+        self.assertTrue(
+            expected_fields.issubset(set(response_data.keys())),
+            "Response is missing one or more expected fields."
         )
 
     def test_upload_combofile(self):
-        """Test combo file upload functionality"""
+        """Test combo file upload functionality."""
         url = reverse('files:upload_combofile')
         
         # Create a temporary test file
@@ -183,14 +213,18 @@ class FileViewsTest(APITestCase):
             self.assertTrue(os.path.exists(uploaded_file.file_path))
     
     def test_upload_combofile_no_file(self):
-        """Test combo file upload with no file"""
+        """Test combo file upload with no file."""
         url = reverse('files:upload_combofile')
         response = self.client.post(url, {}, format='multipart')
             
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.json())
-        self.assertEqual(response.json()['error'], 'No file part')
-    
+        self.assertEqual(
+            response.json().get('error', ''), 
+            'No file part', 
+            "Expected 'No file part' error message."
+        )
+
         
 class FileSerializerTest(TestCase):
     def setUp(self):
