@@ -22,7 +22,8 @@ from rest_framework.decorators import api_view, permission_classes
 
 import adrf.decorators as adrf
 
-from .utils import check_imap_emails_from_db, check_smtp_emails_from_db, extract_country_from_filename, read_logs
+from .utils import extract_country_from_filename, read_logs
+from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db
 from files.models import ExtractedData
 
 

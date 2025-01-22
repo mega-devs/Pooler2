@@ -35,6 +35,14 @@ app.conf.beat_schedule = {
     'backup': {
         'task': 'proxy.tasks.backup_task',
         "schedule": timedelta(hours=12),
+    },
+    'check_imap_emails_from_db': {
+        "task": 'pooler.tasks.check_imap_emails_from_db',
+        "schedule": timedelta(seconds=15),
+    },
+    'check_smtp_emails_from_db': {
+        "task": 'pooler.tasks.check_smtp_emails_from_db',
+        "schedule": timedelta(seconds=15),
     }
 }
 
