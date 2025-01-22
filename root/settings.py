@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'telegram.apps.TelegramConfig',
     'ufw_manager.apps.UfwManagerConfig',    
     'rest_framework',
+    'rest_framework.authtoken',
     'rest_framework_simplejwt',
     'import_export',
     'drf_yasg',
