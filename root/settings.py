@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django_rq',
     'constance',
     'constance.backends.database',
+    'dbbackup',
 ]
 
 MIDDLEWARE = [
@@ -395,3 +396,6 @@ CONSTANCE_CONFIG_FIELDSETS = {
     'Fetch Settings': ('TELEGRAM_FETCH_INTERVAL', 'EMAIL_FETCH_BATCH_SIZE'),
     'Proxy Settings': ('PROXY_CHECK_TIMEOUT',),
 }
+
+DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
+DBBACKUP_STORAGE_OPTIONS = {'location': '/backup/'}
