@@ -20,5 +20,19 @@ def check_imap_emails_from_db():
         ExtractedData.objects.filter(email=el['email']).update(imap_is_valid=el['status'])
 
 
+@app.shared_task
+def check_smtp_emails_from_db():
+    '''Main function for checking SMTP email addresses, launches process_chunk_from_db subfunction'''
+    smtp_results = []
+    data = get_email_bd_data()
+
+    tasks = [process_chunk_from_db(el, smtp_results) for el in
+             data]
+    asyncio.run(async_gather(tasks))
+
+    for el in smtp_results:
+        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
+
+
 async def async_gather(tasks):
     await asyncio.gather(*tasks)

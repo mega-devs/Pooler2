@@ -410,20 +410,6 @@ async def check_smtp_imap_emails_from_zip(filename):
             'imap_status'])
 
 
-@app.task
-async def check_smtp_emails_from_db():
-    '''Main function for checking SMTP email addresses, launches process_chunk_from_db subfunction'''
-    smtp_results = []
-    data = get_email_bd_data()
-
-    tasks = [process_chunk_from_db(el, smtp_results) for el in
-             data]
-    await gather(*tasks)
-
-    for el in smtp_results:
-        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
-
-
 async def read_logs(ind):
     """
     Reads SMTP and IMAP logs from temp log files.
