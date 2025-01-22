@@ -1,3 +1,5 @@
+from django.core import management
+
 from celery import app
 
 from .models import Proxy
@@ -18,3 +20,9 @@ def check_proxy_health():
                 future.result()
             except Exception as e:
                 print(f'Error checking proxy {proxy.host}:{proxy.port} - {e}')
+
+
+@app.shared_task
+def backup_task():
+    management.call_command('dbbackup', '--clean')
+    return True

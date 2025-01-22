@@ -101,3 +101,5 @@ session_name.session
 .vercel
 
 celerybeat-schedule
+
+backup

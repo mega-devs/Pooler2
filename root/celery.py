@@ -5,6 +5,8 @@ from datetime import timedelta
 
 from celery import Celery
 
+from django.core import management
+
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'root.settings')
 
@@ -30,6 +32,10 @@ app.conf.beat_schedule = {
         "task": 'proxy.tasks.check_proxy_health',
         "schedule": timedelta(seconds=300),
     },
+    'backup': {
+        'task': 'proxy.tasks.backup_task',
+        "schedule": timedelta(hours=12),
+    }
 }
 
 
