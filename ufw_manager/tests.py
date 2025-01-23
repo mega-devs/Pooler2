@@ -3,6 +3,7 @@ from django.contrib.admin.sites import AdminSite
 from django.urls import reverse
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.management import call_command
+from django.contrib import messages # Import messages
 
 from users.models import User
 
@@ -89,22 +90,20 @@ class UFWRuleAdminTest(TestCase):
         request = self.factory.get('/')
         request.META['HTTP_REFERER'] = '/admin/ufw_manager/ufwrule/'
         
-        # Add message storage to request
         setattr(request, 'session', 'session')
-        messages = FallbackStorage(request)
-        setattr(request, '_messages', messages)
+        messages_storage = FallbackStorage(request)
+        setattr(request, '_messages', messages_storage)
         
-        with patch('django.core.management.call_command') as mock_call:
-            response = self.admin.apply_rules(request)
-            mock_call.assert_called_once_with('apply_ufw_rules')
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(response.url, '/admin/ufw_manager/ufwrule/')
-
+        with patch('ufw_manager.admin.call_command') as mock_call:
+            with patch('subprocess.run') as mock_subprocess:
+                response = self.admin.apply_rules(request)
+                mock_call.assert_called_once_with('apply_ufw_rules')
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url, '/admin/ufw_manager/ufwrule/')            
     def test_changelist_view(self):
         """Test changelist view with apply rules button"""
         request = self.factory.get('/')
         
-        # Create and add admin user to request
         request.user = User.objects.create_superuser(
             username='admin',
             password='password123'

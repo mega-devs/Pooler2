@@ -1,5 +1,4 @@
-from pyexpat.errors import messages
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.shortcuts import redirect
 from django.urls import path
 from django.core.management import call_command
@@ -19,9 +18,12 @@ class UFWRuleAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def apply_rules(self, request):
-        call_command('apply_ufw_rules')
-        messages.success(request, 'UFW rules have been applied successfully')
-        return redirect(request.META['HTTP_REFERER'])
+        try:
+            call_command('apply_ufw_rules')
+            messages.success(request, 'UFW rules have been applied successfully')
+        except Exception as e:
+            messages.error(request, f'Error applying UFW rules: {str(e)}')
+        return redirect(request.META.get('HTTP_REFERER', '/admin/ufw_manager/ufwrule/'))
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
