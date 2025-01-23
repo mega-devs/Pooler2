@@ -70,28 +70,35 @@ class TelegramUtilsTest(TestCase):
     async def test_parse_messages(self, mock_client):
         """Test parsing messages from Telegram channel"""
         mock_message = AsyncMock()
-        mock_message.message = "Test message"
+        mock_message.sender_id = 12345
+        mock_message.text = "Test message"
         mock_message.date = datetime.now()
-        mock_message.media = None
-        
-        mock_client.get_messages = AsyncMock(return_value=[mock_message])
-        
+        mock_message.media = None  # No media
+
+        # Mock `iter_messages` to return the mock message in an async generator
+        async def async_generator():
+            yield mock_message
+
+        mock_client.iter_messages = AsyncMock(return_value=async_generator())
+
+        # Call the `parse_messages` function
         response = await parse_messages(mock_client, "@testchannel")
-        messages = [
+
+        # Expected parsed message structure
+        expected_messages = [
             {
-                'text': mock_message.message,
-                'date': mock_message.date.isoformat(),
-                'has_media': False
+                'sender': mock_message.sender_id,
+                'date': mock_message.date.strftime('%Y-%m-%d %H:%M:%S'),
+                'text': mock_message.text,
             }
         ]
-        
-        response.content = json.dumps(messages).encode('utf-8')
-        
-        parsed_messages = json.loads(response.content)
-        self.assertEqual(len(parsed_messages), 1)
-        self.assertEqual(parsed_messages[0]['text'], "Test message")
-        self.assertIn('date', parsed_messages[0])
-        mock_client.get_messages.assert_called_once_with("@testchannel")
+
+        # Verify response content
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.content), expected_messages)
+
+        # Verify `iter_messages` was called
+        mock_client.iter_messages.assert_called_once_with("@testchannel", limit=10)
 
 class TelegramViewsTest(APITestCase):
     def setUp(self):
