@@ -1,7 +1,7 @@
-from django.core.cache import cache
+from datetime import timedelta
 
 from rest_framework import status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
@@ -10,6 +10,8 @@ from .models import Proxy
 from .serializers import ProxySerizalizer, TextFileUploadSerializer
 from .tasks import check_proxy_health
 from .utils import check_single_proxy
+
+from root.celery import app
 
 
 class ProxyViewSet(ModelViewSet):
@@ -118,3 +120,20 @@ class ProxyViewSet(ModelViewSet):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def set_backup_delay(request):
+    try:
+        app.conf.beat_schedule['backup']['schedule'] = timedelta(hours=request.data.get('delay'))
+        return Response({'status': 'success'}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def get_backup_delay(request):
+    try:
+        return Response({'delay': app.conf.beat_schedule['backup']['schedule']}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

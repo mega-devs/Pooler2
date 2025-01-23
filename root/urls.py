@@ -11,7 +11,7 @@ from drf_yasg import openapi
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from files.views import ExtractedDataModelViewSet, UploadedFileModelViewSet
-from proxy.views import ProxyViewSet
+from proxy.views import ProxyViewSet, set_backup_delay, get_backup_delay
 from root import settings
 from users.views import UserViewSet
 from django.conf import settings as main_settings
@@ -64,6 +64,8 @@ urlpatterns = [
    path(r'ht/', include('health_check.urls')),
    path('silk/', include('silk.urls', namespace='silk')),
    path('django-rq/', include('django_rq.urls')),
+   path('backup/set/', set_backup_delay),
+   path('backup/get/', get_backup_delay),
 ] + router.urls + static(main_settings.MEDIA_URL, document_root=main_settings.MEDIA_ROOT)
 
 if settings.DEBUG:
