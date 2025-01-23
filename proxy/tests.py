@@ -100,7 +100,7 @@ class TextFileUploadSerializerTest(APITestCase):
 class ProxyCheckerTest(TestCase):
     def setUp(self):
         self.checker = ProxyChecker()
-        self.checker.ip = '192.168.1.1'  # Initialize with a valid IP address
+        self.checker.ip = '192.168.1.1'
         
     @patch('proxy.checker.pycurl.Curl')
     def test_get_ip(self, mock_curl):
@@ -129,18 +129,20 @@ class ProxyCheckerTest(TestCase):
         self.assertIn('protocols', result)
         self.assertIn('anonymity', result)
 
+
 class ProxyTasksTest(TestCase):
+    def setUp(self):
+        Proxy.objects.all().delete()
+
     @patch('proxy.tasks.check_single_proxy')
     def test_check_proxy_health(self, mock_check):
-        proxy = Proxy.objects.create(
-            host='192.168.1.1',
-            port=8080
-        )
-        
+        """Ensure check_single_proxy is called exactly once."""
+        proxy = Proxy.objects.create(host='192.168.1.1', port=8080)
+
         check_proxy_health()
         self.addCleanup(proxy.delete)
         mock_check.assert_called_once()
-        
+
     @patch('proxy.tasks.check_single_proxy')
     def test_thread_pool_execution(self, mock_check_single_proxy):
         proxy = Proxy.objects.create(
@@ -157,4 +159,3 @@ class ProxyTasksTest(TestCase):
         check_proxy_health()        
         mock_check_single_proxy.assert_called_once_with(proxy)        
         self.addCleanup(proxy.delete)
-
