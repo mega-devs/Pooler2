@@ -4,8 +4,12 @@ from django.urls import reverse
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.management import call_command
 
+from users.models import User
+
 from .models import UFWRule
 from .admin import UFWRuleAdmin
+
+from unittest.mock import patch
 
 
 class MockRequest:
@@ -99,5 +103,12 @@ class UFWRuleAdminTest(TestCase):
     def test_changelist_view(self):
         """Test changelist view with apply rules button"""
         request = self.factory.get('/')
+        
+        # Create and add admin user to request
+        request.user = User.objects.create_superuser(
+            username='admin',
+            password='password123'
+        )
+        
         response = self.admin.changelist_view(request)
         self.assertTrue(response.context_data['apply_rules_button'])

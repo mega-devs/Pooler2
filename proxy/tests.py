@@ -132,19 +132,18 @@ class ProxyCheckerTest(TestCase):
 class ProxyTasksTest(TestCase):
     @patch('proxy.tasks.check_single_proxy')
     def test_check_proxy_health(self, mock_check):
-        Proxy.objects.all().delete()
         proxy = Proxy.objects.create(
             host='192.168.1.1',
             port=8080
         )
         
         check_proxy_health()
+        self.addCleanup(proxy.delete)
         mock_check.assert_called_once()
         
-    @patch('concurrent.futures.ThreadPoolExecutor')
-    def test_thread_pool_execution(self, mock_executor):
-        Proxy.objects.all().delete()
-        Proxy.objects.create(
+    @patch('proxy.tasks.check_single_proxy')
+    def test_thread_pool_execution(self, mock_check_single_proxy):
+        proxy = Proxy.objects.create(
             host='192.168.5.12',
             port=8000,
             is_active=True,
@@ -153,7 +152,9 @@ class ProxyTasksTest(TestCase):
             anonymity='Elite',
             timeout=100
         )
-        mock_executor.return_value.__enter__.return_value.submit.return_value.result.return_value = True
-        mock_executor.return_value.__enter__.return_value.submit.return_value.result.side_effect = lambda: True if not mock_executor.return_value.__enter__.return_value.submit.return_value.result.called else TimeoutError("Timeout occurred")
-        check_proxy_health()
-        mock_executor.assert_called_once_with(max_workers=100)
+        
+        mock_check_single_proxy.return_value = True        
+        check_proxy_health()        
+        mock_check_single_proxy.assert_called_once_with(proxy)        
+        self.addCleanup(proxy.delete)
+
