@@ -46,9 +46,11 @@ class TelegramUtilsTest(TestCase):
             self.assertFalse(is_valid_telegram_username(username))    
 
     @patch('aiofiles.open')
-    async def test_read_existing_messages(self, mock_open):
+    @patch('os.path.exists')
+    async def test_read_existing_messages(self, mock_exists, mock_open):
         """Test reading messages from file"""
         test_messages = [{'text': 'test message'}]
+        mock_exists.return_value = True
         mock_open.return_value.__aenter__.return_value.read.return_value = json.dumps(test_messages)
         
         result = await read_existing_messages('test.json')
@@ -129,16 +131,22 @@ class TelegramViewsTest(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('files', response.json())
-
     @patch('os.path.exists')
     @patch('builtins.open')
-    def test_get_combofiles_from_tg(self, mock_open, mock_exists):
+    async def test_get_combofiles_from_tg(self, mock_open, mock_exists):
         """Test getting combo files from Telegram"""
         mock_exists.return_value = True
         mock_open.return_value.__enter__.return_value.readlines.return_value = ['link1', 'link2']
         
         url = reverse('telegram:get_combofiles_from_tg')
-        response = self.client.get(url)
+        
+        async with self.client as async_client:
+            response = await async_client.get(
+                url,
+                HTTP_ACCEPT='application/json',
+                content_type='application/json'
+            )
+        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_from_tg_invalid_date(self):
