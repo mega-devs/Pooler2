@@ -18,7 +18,7 @@ async def parse_messages(client, channel):
     Returns a list of message dictionaries with formatted data.
     """
     messages = []
-    async for message in client.iter_messages(channel, limit=10):
+    async for message in (await client.iter_messages(channel, limit=10)):
         messages.append({
             'sender': message.sender_id,
             'date': message.date.strftime('%Y-%m-%d %H:%M:%S'),

@@ -110,7 +110,7 @@ async def telegram_add_channel(request):
         existing_messages = await read_existing_messages(filename)
 
         existing_texts = {msg['text'] for msg in existing_messages}
-        unique_messages = [msg for msg in new_messages if msg['text'] not in existing_texts]
+        unique_messages = [msg for msg in new_messages if isinstance(msg, dict) and 'text' in msg and msg['text'] not in existing_texts]
 
         if unique_messages:
             combined_messages = existing_messages + unique_messages
