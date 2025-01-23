@@ -126,18 +126,24 @@ class TelegramViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('status', response.data)
         
-    def test_download_files_from_tg(self):
+    @patch('telegram.views.TelegramClient')
+    def test_download_files_from_tg(self, mock_client):
         """Test downloading files from Telegram"""
+        
         url = reverse('telegram:download_files')
         data = {
             'links': ['https://t.me/test/1'],
             'date': '2024-01-22',
             'max_size': 10
         }
+        # Mock the response of the TelegramClient to simulate successful link processing
+        mock_client.download_files.return_value = {'status': 'success', 'files': ['file1.txt']}
         
         response = self.client.post(url, data, format='json')
+        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('files', response.json())
+
     @patch('os.path.exists')
     @patch('builtins.open')
     async def test_get_combofiles_from_tg(self, mock_open, mock_exists):
