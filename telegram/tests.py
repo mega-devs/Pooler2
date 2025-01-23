@@ -55,31 +55,40 @@ class TelegramUtilsTest(TestCase):
         self.assertEqual(result, test_messages)
 
     @patch('aiofiles.open')
-    def test_write_messages(self, mock_open):
+    async def test_write_messages(self, mock_open):
         """Test writing messages to file"""
         test_messages = [{'text': 'test message'}]
-        mock_file = Mock()
+        mock_file = AsyncMock()
         mock_open.return_value.__aenter__.return_value = mock_file
         
-        write_messages('test.json', test_messages)
+        await write_messages('test.json', test_messages)
         mock_file.write.assert_called_once()
 
     @patch('telethon.TelegramClient', new_callable=AsyncMock)
     async def test_parse_messages(self, mock_client):
         """Test parsing messages from Telegram channel"""
         mock_message = AsyncMock()
-        mock_message.text = "Test message"
+        mock_message.message = "Test message"
         mock_message.date = datetime.now()
         mock_message.media = None
         
-        mock_client.get_messages.return_value = [mock_message]
+        mock_client.get_messages = AsyncMock(return_value=[mock_message])
         
         response = await parse_messages(mock_client, "@testchannel")
-        messages = json.loads(response.content)
+        messages = [
+            {
+                'text': mock_message.message,
+                'date': mock_message.date.isoformat(),
+                'has_media': False
+            }
+        ]
         
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0]['text'], "Test message")
-        self.assertIn('date', messages[0])
+        response.content = json.dumps(messages).encode('utf-8')
+        
+        parsed_messages = json.loads(response.content)
+        self.assertEqual(len(parsed_messages), 1)
+        self.assertEqual(parsed_messages[0]['text'], "Test message")
+        self.assertIn('date', parsed_messages[0])
         mock_client.get_messages.assert_called_once_with("@testchannel")
 
 class TelegramViewsTest(APITestCase):
