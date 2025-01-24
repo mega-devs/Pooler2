@@ -205,61 +205,99 @@ def imapCheck(email, password, imapServerName):
 
 
 async def process_chunk_from_file(chunk, results):
-    """Программа проверяет почтовый адрес на валидность и SMTP и IMAP сразу по написанию, по наличию МХ записей на
-    сервере и по
-    привествию с сервера, данные о почтовых адресах загружены из зип архива."""
+    """
+    Validates email addresses by checking SMTP and IMAP connectivity simultaneously.
+    Verifies MX records on the server and server greeting.
+    Email data is loaded from a zip archive.
+    """
     for cred in chunk:
-        if "@" not in cred:
+        print(f"Processing credential: {cred}")
+        if "|" not in cred:
+            print(f"Skipping invalid format - no separator: {cred}")
             continue
-        if cred.count(":") != 1:
+            
+        parts = cred.strip().split("|")
+        if len(parts) != 4:
+            print(f"Skipping invalid parts count: {len(parts)}")
             continue
 
-        server, data = cred.strip().split(":")
-        port, email, password = data.split(",")
-        smtp_status = 'invalid'
+        server, port, email, password = parts
+        print(f"Processing email: {email} with server: {server} port: {port}")
+        smtp_status = None
+        imap_status = None
 
         try:
-            match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
+            # Fixed regex pattern without backticks
+            match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})', email)
             if match:
+                print(f"Email format valid: {email}")
                 try:
-                    records = dns.resolver.resolve("mail.ru", 'MX')
-                    mx_record = records[0].exchange
-                    mx_record = str(mx_record)
-                    if mx_record is not None:
-                        server = smtplib.SMTP()
-                        server.set_debuglevel(0)
+                    # Use email domain for MX lookup
+                    email_domain = email.split('@')[1]
+                    print(f"Looking up MX records for domain: {email_domain}")
+                    records = dns.resolver.resolve(email_domain, 'MX')
+                    mx_record = str(records[0].exchange)
+                    print(f"Found MX record: {mx_record}")
 
-                        try:
-                            server.connect(mx_record)
-                            code, message = server.helo(server)
-                            if server[0:4] == 'smtp':
-                                server = smtplib.SMTP(server, port)
-                                if code == 250:
-                                    smtp_status = 'valid'
-                            elif server[0:4] == 'imap':
-                                check_result = imapCheck(email, password, server)
-                                if check_result:
-                                    imap_status = 'valid'
-                                else:
-                                    imap_status = 'invalid'
-                        except Exception as ex:
-                            print(ex)
+                    server_connect = smtplib.SMTP()
+                    server_connect.set_debuglevel(0)
+
+                    try:
+                        print(f"Attempting to connect to MX server: {mx_record}")
+                        server_connect.connect(mx_record)
+                        code, message = server_connect.helo(server)
+                        print(f"HELO response code: {code}, message: {message}")
+                        
+                        if code == 250:
+                            print(f"Connecting to SMTP server: {server}:{port}")
+                            server_smtp = smtplib.SMTP(server, int(port))
+                            code, message = server_smtp.helo(server)
+                            print(f"SMTP HELO response: {code}, {message}")
+                            if code == 250:
+                                smtp_status = True
+                                print("SMTP validation successful")
+                            else:
+                                smtp_status = False
+                            
+                            # IMAP check after successful SMTP
+                            print("Attempting IMAP check")
+                            check_result = imapCheck(email, password, server)
+                            imap_status = True if check_result else False
+                            print(f"IMAP check result: {imap_status}")
+                            
+                            server_smtp.quit()
+                        else:
+                            smtp_status = False
+                        server_connect.quit()
+                        
+                    except Exception as ex:
+                        print(f"Connection error details: {str(ex)}")
+                        logger.error(f"Connection error for {email}: {ex}")
+                        
                 except Exception as ex:
-                    print(ex)
-                result = {'email': email, 'password': password, 'status': smtp_status, 'imap_status': imap_status}
-                results.append(result)
-            # status = await driver.check_connection(email, password)
-            # if status == 'valid':
-            #     results.append(status)
+                    print(f"DNS resolution error details: {str(ex)}")
+                    logger.error(f"DNS resolution error for {email}: {ex}")
 
-            logger.info({'email': email,
-                         'password': password,
-                         'smtp_valid': smtp_status,
-                         'imap_valid': imap_status,
-                         'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+                result = {
+                    'email': email,
+                    'password': password,
+                    'status': smtp_status,
+                    'imap_status': imap_status
+                }
+                print(f"Adding result: {result}")
+                results.append(result)
+
+                logger.info({
+                    'email': email,
+                    'password': password,
+                    'smtp_valid': smtp_status,
+                    'imap_valid': imap_status,
+                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                })
 
         except Exception as e:
-            logger.error(f"Error checking connection for email {email}: {e}")
+            print(f"General error details: {str(e)}")
+            logger.error(f"Error processing email {email}: {e}")
 
 
 async def process_chunk_from_db(chunk, smtp_results):
@@ -378,6 +416,8 @@ async def imap_process_chunk_from_db(chunk, imap_results):
         logger.error(f"Error checking connection for email {email}: {e}")
 
 
+from asgiref.sync import sync_to_async
+
 @app.task
 async def check_smtp_imap_emails_from_zip(filename):
     '''Main function for checking SMTP and IMAP email addresses, handles archive processing and passes data 
@@ -406,8 +446,10 @@ async def check_smtp_imap_emails_from_zip(filename):
             await gather(*tasks)
 
     for el in results:
-        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'], imap_is_valid=el[
-            'imap_status'])
+        await sync_to_async(ExtractedData.objects.filter(email=el['email']).update)(
+            smtp_is_valid=el['status'], 
+            imap_is_valid=el['imap_status']
+        )
 
 
 async def read_logs(ind):
