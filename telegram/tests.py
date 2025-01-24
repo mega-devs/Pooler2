@@ -3,7 +3,7 @@ from django.test import TestCase, AsyncClient
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
-from unittest.mock import AsyncMock, patch, Mock
+from unittest.mock import AsyncMock, mock_open, patch, Mock
 import json
 import os
 
@@ -99,6 +99,8 @@ class TelegramViewsTest(APITestCase):
     def setUp(self):
         self.valid_channel = '@testchannel'
         self.valid_token = '7430783381:AAFEw0LJsRZj8598mOGQ8wh9REXIvVqAczQ'
+        self.get_combofiles_from_tg_url = reverse('telegram:get_combofiles_from_tg')
+        self.get_from_tg_url = reverse('telegram:get_from_tg')
 
     @patch('telegram.views.TelegramClient')
     def test_telegram_add_channel(self, mock_client):
@@ -134,18 +136,14 @@ class TelegramViewsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('files', response.json())
 
-    @patch('os.path.exists')
-    @patch('builtins.open')
-    async def test_get_combofiles_from_tg(self, mock_open, mock_exists):
+    @patch("builtins.open", new_callable=mock_open, read_data="link1\nlink2\nlink3")
+    @patch("telegram.views.download_files_from_tg", new_callable=AsyncMock)
+    @patch('telegram.views.TelegramClient')
+    def test_get_combofiles_from_tg(self, mock_download_files, mock_open, mock_client):
         """Test getting combo files from Telegram"""
-        mock_exists.return_value = True
-        mock_open.return_value.__enter__.return_value.readlines.return_value = ['link1', 'link2']
-        
-        url = reverse('telegram:get_combofiles_from_tg')
-        
-        async_client = AsyncClient()
-        response = await async_client.get(url)
-        
+        mock_download_files.return_value = ["/path/to/file1.txt", "/path/to/file2.txt"]
+
+        response = self.client.get(self.get_combofiles_from_tg_url, {"date": "2025-01-01", "max_size": "100"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_from_tg_invalid_date(self):
@@ -154,11 +152,11 @@ class TelegramViewsTest(APITestCase):
         response = self.client.get(url, {'date': 'invalid-date'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch('telegram.views.download_files_from_tg')
-    def test_get_from_tg_success(self, mock_download):
-        """Test successful file retrieval from Telegram"""
-        mock_download.return_value = ['file1.txt', 'file2.txt']
-        
-        url = reverse('telegram:get_from_tg')
-        response = self.client.get(url)
+    @patch("builtins.open", new_callable=mock_open, read_data="link1\nlink2\nlink3")
+    @patch("telegram.views.download_files_from_tg", new_callable=AsyncMock)
+    @patch('telegram.views.TelegramClient')
+    def test_get_from_tg_success(self, mock_download_files, mock_open, mock_client):
+        mock_download_files.return_value = ["/path/to/file1.txt", "/path/to/file2.txt"]
+
+        response = self.client.get(self.get_from_tg_url, {"date": "2025-01-01", "max_size": "100"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
