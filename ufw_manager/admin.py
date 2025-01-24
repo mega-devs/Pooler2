@@ -9,6 +9,7 @@ class UFWRuleAdmin(admin.ModelAdmin):
     list_display = ('direction', 'protocol', 'port', 'from_ip', 'to_ip', 'action', 'description')
     list_filter = ('direction', 'protocol', 'action')
     search_fields = ('from_ip', 'to_ip', 'description')
+    list_editable = ('protocol', 'port', 'from_ip', 'to_ip', 'action', 'description')
 
     def get_urls(self):
         urls = super().get_urls()

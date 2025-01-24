@@ -8,3 +8,4 @@ class ProxyAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'country', 'anonymity')
     search_fields = ('host', 'country', 'country_code')
     list_per_page = 25
+    list_editable = ('is_active', 'country', 'anonymity', 'timeout')

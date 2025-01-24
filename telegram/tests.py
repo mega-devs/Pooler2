@@ -1,5 +1,5 @@
 from datetime import datetime
-from django.test import TestCase
+from django.test import TestCase, AsyncClient
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -73,18 +73,15 @@ class TelegramUtilsTest(TestCase):
         mock_message.sender_id = 12345
         mock_message.text = "Test message"
         mock_message.date = datetime.now()
-        mock_message.media = None  # No media
+        mock_message.media = None
 
-        # Mock `iter_messages` to return the mock message in an async generator
         async def async_generator():
             yield mock_message
 
         mock_client.iter_messages = AsyncMock(return_value=async_generator())
 
-        # Call the `parse_messages` function
         response = await parse_messages(mock_client, "@testchannel")
 
-        # Expected parsed message structure
         expected_messages = [
             {
                 'sender': mock_message.sender_id,
@@ -93,11 +90,9 @@ class TelegramUtilsTest(TestCase):
             }
         ]
 
-        # Verify response content
         self.assertEqual(response.status_code, 200)
         self.assertEqual(json.loads(response.content), expected_messages)
 
-        # Verify `iter_messages` was called
         mock_client.iter_messages.assert_called_once_with("@testchannel", limit=10)
 
 class TelegramViewsTest(APITestCase):
@@ -108,21 +103,16 @@ class TelegramViewsTest(APITestCase):
     @patch('telegram.views.TelegramClient')
     def test_telegram_add_channel(self, mock_client):
         """Test adding Telegram channel"""
-        # Mock the asynchronous method inside the TelegramClient that you are calling in your view.
         mock_telegram_instance = AsyncMock()
         mock_client.return_value = mock_telegram_instance
 
-        # Assuming you call an async method like `add_channel` inside TelegramClient
-        mock_telegram_instance.add_channel.return_value = {'status': 'success'}  # Mock return value of async method
+        mock_telegram_instance.add_channel.return_value = {'status': 'success'}
 
-        # The URL for your API endpoint
         url = reverse('telegram:upload_file_by_telegram')
         data = {'channel': self.valid_channel}
 
-        # Perform the POST request to your view
         response = self.client.post(url, data, format='json')
 
-        # Assert the response status and the presence of 'status' in the response
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('status', response.data)
         
@@ -136,7 +126,7 @@ class TelegramViewsTest(APITestCase):
             'date': '2024-01-22',
             'max_size': 10
         }
-        # Mock the response of the TelegramClient to simulate successful link processing
+
         mock_client.download_files.return_value = {'status': 'success', 'files': ['file1.txt']}
         
         response = self.client.post(url, data, format='json')
@@ -153,12 +143,8 @@ class TelegramViewsTest(APITestCase):
         
         url = reverse('telegram:get_combofiles_from_tg')
         
-        async with self.client as async_client:
-            response = await async_client.get(
-                url,
-                HTTP_ACCEPT='application/json',
-                content_type='application/json'
-            )
+        async_client = AsyncClient()
+        response = await async_client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
