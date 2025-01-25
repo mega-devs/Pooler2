@@ -33,7 +33,7 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 @require_http_methods(["GET"])
 def get_test_list(self):
     test_files = {}
@@ -44,6 +44,7 @@ def get_test_list(self):
     return Response({"result": test_files})
 
 @api_view(['POST'])
+@csrf_exempt
 @permission_classes([IsAuthenticated])
 @require_http_methods(["POST"])
 def run_test(self, request):
