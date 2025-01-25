@@ -1,9 +1,29 @@
 import asyncio
+import subprocess
 
 from files.models import ExtractedData
 from pooler.utils import get_email_bd_data, process_chunk_from_db
 
 from celery import app
+
+
+@app.shared_task
+def run_pytest():
+    """Run pytest and return the output."""
+    try:
+        process = subprocess.run(
+            ["pytest", "--json-report", "--disable-warnings"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        return {
+            "stdout": process.stdout,  # Standard output
+            "stderr": process.stderr,  # Error output
+            "returncode": process.returncode,  # 0 if tests passed
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.shared_task

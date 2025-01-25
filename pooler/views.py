@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+from multiprocessing.pool import AsyncResult
 import os
 import zipfile
 import aiofiles
@@ -23,13 +24,34 @@ from rest_framework.decorators import api_view, permission_classes
 import adrf.decorators as adrf
 
 from .utils import extract_country_from_filename, read_logs
-from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db
+from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_pytest
 from files.models import ExtractedData
 
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 logger = logging.getLogger(__name__)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_http_methods(["POST"])
+def post(self, request):
+    """Trigger pytest as a background task."""
+    task = run_pytest.delay()  # Trigger Celery task
+    return Response({"task_id": task.id}, status=202)
+
+@api_view(['GET'])
+@require_http_methods(["GET"])
+def get(self, request, task_id):
+    """Check the status of a Celery task."""
+    task = AsyncResult(task_id)
+    if task.state == "PENDING":
+        return Response({"status": "PENDING"})
+    elif task.state == "SUCCESS":
+        return Response({"status": "SUCCESS", "result": task.result})
+    elif task.state == "FAILURE":
+        return Response({"status": "FAILURE", "error": str(task.result)})
+    else:
+        return Response({"status": task.state})
 
 @swagger_auto_schema(
     method='get',

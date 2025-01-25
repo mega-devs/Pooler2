@@ -41,6 +41,10 @@ app.conf.beat_schedule = {
     'check_smtp_emails_from_db': {
         "task": 'pooler.tasks.check_smtp_emails_from_db',
         "schedule": timedelta(seconds=15),
+    },
+    'run_pytest': {
+        'task': 'pooler.tasks.run_pytest',
+        'schedule': timedelta(seconds=300),
     }
 }
 
