@@ -261,7 +261,6 @@ async def process_chunk_from_file(chunk, results, uploaded_file):
                             else:
                                 smtp_status = False
                             
-                            # IMAP check after successful SMTP
                             print("Attempting IMAP check")
                             check_result = imapCheck(email, password, server)
                             imap_status = True if check_result else False
@@ -434,13 +433,11 @@ async def check_smtp_imap_emails_from_zip(filename):
     Results in updating database records for corresponding email addresses
     """
     results = []
-    
     file_path = os.path.join('/app', 'combofiles', filename)
-    
     logger.info(f"Processing file at: {file_path}")
 
     try:
-        uploaded_file = await sync_to_async(UploadedFile.objects.get)(filename=filename)
+        uploaded_file = await sync_to_async(UploadedFile.objects.filter(filename=filename).latest)('upload_date')
     except UploadedFile.DoesNotExist:
         user = await sync_to_async(User.objects.first)()
         uploaded_file = await sync_to_async(UploadedFile.objects.create)(
@@ -533,23 +530,32 @@ def auto_process_combo_files():
     Automatically processes all files in media/combofiles directory
     Returns the number of files processed
     """
-    combo_dir = os.path.join(settings.MEDIA_ROOT, "combofiles")
+    print("Starting auto_process_combo_files")
+    combo_dir = os.path.join('/app', "combofiles")    
     processed_count = 0
     
     try:
+        print("Getting event loop")
         loop = asyncio.get_event_loop()
     except RuntimeError:
+        print("Creating new event loop")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
+    print(f"Scanning directory: {combo_dir}")
     for filename in os.listdir(combo_dir):
+        print(f"Found file: {filename}")
         if filename.endswith(('.txt', '.zip')):
+            print(f"Processing file: {filename}")
             try:
                 loop.run_until_complete(check_smtp_imap_emails_from_zip(filename))
                 processed_count += 1
+                print(f"Successfully processed file: {filename}")
                 logger.info(f"Successfully processed file: {filename}")
             except Exception as e:
+                print(f"Error processing file {filename}: {str(e)}")
                 logger.error(f"Error processing file {filename}: {e}")
                 continue
 
+    print(f"Finished processing. Total files processed: {processed_count}")
     return processed_count

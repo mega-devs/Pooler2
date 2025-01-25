@@ -46,10 +46,10 @@ app.conf.beat_schedule = {
         'task': 'pooler.tasks.run_pytest',
         'schedule': timedelta(seconds=300),
     },
-    'process-combo-files': {
-        'task': 'pooler.utils.auto_process_combo_files',
-        'schedule': timedelta(seconds=1),
-    }
+    # 'process-combo-files': {
+    #     'task': 'pooler.utils.auto_process_combo_files',
+    #     'schedule': timedelta(seconds=15),
+    # }
 }
 
 

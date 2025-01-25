@@ -4,6 +4,7 @@ import mimetypes
 import re
 from random import sample
 
+from django.db.models import Sum, Count
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
@@ -985,4 +986,50 @@ class UploadedFileModelViewSet(viewsets.ModelViewSet):
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def uploaded_files_data(request):
+    """
+    Get uploaded files data with filtering options.    
+    """
+
+    queryset = UploadedFile.objects.all()
     
+    origin = request.query_params.get('origin')
+    country = request.query_params.get('country')
+    checked = request.query_params.get('checked')
+    date_from = request.query_params.get('date_from')
+    date_to = request.query_params.get('date_to')
+
+    if origin:
+        queryset = queryset.filter(origin=origin)
+    if country:
+        queryset = queryset.filter(country=country)
+    if checked is not None:
+        queryset = queryset.filter(is_checked=checked.lower() == 'true')
+    if date_from:
+        queryset = queryset.filter(upload_date__gte=date_from)
+    if date_to:
+        queryset = queryset.filter(upload_date__lte=date_to)
+
+    stats = {
+        'total_files': queryset.count(),
+        'total_duplicates': queryset.aggregate(Sum('duplicate_count'))['duplicate_count__sum'] or 0,
+        'origins_breakdown': dict(queryset.values_list('origin').annotate(count=Count('id'))),
+        'files': list(queryset.values(
+            'id',
+            'filename',
+            'file_path',
+            'upload_date',
+            'country',
+            'duplicate_count',
+            'origin',
+            'is_checked',
+            'user_id'
+        ))
+    }
+    
+    return JsonResponse({
+        'statistics': stats,
+    })
