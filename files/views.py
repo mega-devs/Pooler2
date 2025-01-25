@@ -233,7 +233,11 @@ def upload_combofile(request):
 
     if 'file' not in request.FILES:
         return JsonResponse({'error': 'No file part'}, status=400)
-
+    
+    user = request.user
+    if not user.is_authenticated:
+        return JsonResponse({'error': 'User is not authenticated'}, status=401)
+    
     file = request.FILES['file']
     if not file.name:
         return JsonResponse({'error': 'No file selected'}, status=400)
@@ -254,7 +258,7 @@ def upload_combofile(request):
             file_path=file_path,
             country=category,
             origin=origin,
-            user=request.user
+            user=user
         )
 
         # Async processing
