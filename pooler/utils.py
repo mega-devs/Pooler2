@@ -11,9 +11,11 @@ from asyncio import gather
 from datetime import datetime
 
 import dns.resolver
+from users.models import User
 from validate_email_address import validate_email
+from asgiref.sync import sync_to_async
 
-from files.models import ExtractedData
+from files.models import ExtractedData, UploadedFile
 from files.service import logger
 from root import settings
 from root.celery import app
@@ -27,23 +29,23 @@ def chunks(lst, n):
         yield lst[i:i + n]
 
 
-#
-# class SmtpDriver:
-#     """
-#     A class to handle SMTP connection checking.
-#
-#     Methods:
-#         check_connection(email, password): Checks the SMTP connection for a given email and password.
-#     """
+
+class SmtpDriver:
+    """
+    A class to handle SMTP connection checking.
+
+    Methods:
+        check_connection(email, password): Checks the SMTP connection for a given email and password.
+    """
 
 # async def check_connection(self, email, password):
 #     """
 #     Check the SMTP connection for a given email and password.
-#
+
 #     Args:
 #         email (str): Email address to check.
 #         password (str): Password for the email address.
-#
+
 #     Returns:
 #         dict: Connection status and port information.
 #     """
@@ -52,17 +54,17 @@ def chunks(lst, n):
 #         async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpservices.json'), 'r') as f:
 #             content = await f.read()
 #             smtp_services = json.loads(content)
-#
+
 #         async with aiofiles.open(os.path.join('app', 'static', 'json', 'inc_smtpports.json'), 'r') as f:
 #             content = await f.read()
 #             smtp_ports = json.loads(content)['smtpports']
-#
+
 #         email_domain = email.split('@')[1]
 #         host = smtp_services["smtpservices"].get(email_domain, None)
-#
+
 #         if not host:
 #             raise ValueError(f"No SMTP service found for domain: {email_domain}")
-#
+
 #         for port in smtp_ports:
 #             smtp_server = aiosmtplib.SMTP(hostname=host.split(':')[0], port=port, start_tls=True, timeout=10)
 #             try:
@@ -70,7 +72,7 @@ def chunks(lst, n):
 #                 await smtp_server.connect()
 #                 await smtp_server.login(email, password)
 #                 await smtp_server.quit()
-#
+
 #                 # Save result to the database
 #                 EmailCheck.objects.create(
 #                     email=email,
@@ -83,7 +85,7 @@ def chunks(lst, n):
 #             except Exception as e:
 #                 print(f"[SMTP] {str(e)}")
 #                 pass
-#
+
 #         # If all ports fail
 #         EmailCheck.objects.create(
 #             email=email,
@@ -416,15 +418,26 @@ async def imap_process_chunk_from_db(chunk, imap_results):
         logger.error(f"Error checking connection for email {email}: {e}")
 
 
-from asgiref.sync import sync_to_async
-
 @app.task
 async def check_smtp_imap_emails_from_zip(filename):
-    '''Main function for checking SMTP and IMAP email addresses, handles archive processing and passes data 
-    to process_chunk_from_file function. Results in updating database records for corresponding email addresses'''
+    """
+    Main function for checking SMTP and IMAP email addresses, 
+    handles archive processing and passes data to process_chunk_from_file function. 
+    Results in updating database records for corresponding email addresses
+    """
     results = []
 
     file_path = os.path.join(settings.MEDIA_ROOT, "combofiles", filename)
+
+    try:
+        uploaded_file = await sync_to_async(UploadedFile.objects.get)(filename=filename)
+    except UploadedFile.DoesNotExist:
+        user = await sync_to_async(User.objects.first)()
+        uploaded_file = await sync_to_async(UploadedFile.objects.create)(
+            filename=filename,
+            file_path=file_path,
+            user=user
+        )
 
     if filename.endswith('.zip'):
         with zipfile.ZipFile(file_path, 'r') as zip_file:
@@ -434,8 +447,7 @@ async def check_smtp_imap_emails_from_zip(filename):
                         lines = f.readlines()
                         chunk_size = 100
                         chunked_lines = list(chunks(lines, chunk_size))
-                        tasks = [process_chunk_from_file(chunk, results) for chunk in
-                                 chunked_lines]
+                        tasks = [process_chunk_from_file(chunk, results) for chunk in chunked_lines]
                         await gather(*tasks)
     else:
         async with aiofiles.open(file_path, 'r') as f:
@@ -446,9 +458,13 @@ async def check_smtp_imap_emails_from_zip(filename):
             await gather(*tasks)
 
     for el in results:
-        await sync_to_async(ExtractedData.objects.filter(email=el['email']).update)(
-            smtp_is_valid=el['status'], 
-            imap_is_valid=el['imap_status']
+        obj, created = await sync_to_async(ExtractedData.objects.update_or_create)(
+            email=el['email'],
+            defaults={
+                'smtp_is_valid': el['status'],
+                'imap_is_valid': el['imap_status'],
+                'uploaded_file': uploaded_file
+            }
         )
 
 
