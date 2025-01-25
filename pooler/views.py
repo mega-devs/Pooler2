@@ -39,8 +39,8 @@ def get_test_list(self):
     test_files = []
     files = [str(file) for file in Path(settings.BASE_DIR.parent).rglob(f"tests.py") if file.is_file()]
     for file in files:
-        file_name = os.path.basename(file)
-        test_files.append({file_name: file})
+        app = file.split('/')[-2]
+        test_files.append({app: file})
     return Response({"result": test_files})
 
 @api_view(['POST'])
