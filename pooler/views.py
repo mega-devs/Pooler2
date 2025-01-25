@@ -24,7 +24,7 @@ from rest_framework.decorators import api_view, permission_classes
 import adrf.decorators as adrf
 
 from .utils import extract_country_from_filename, read_logs
-from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_pytest
+from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_selected_tests
 from files.models import ExtractedData
 
 
@@ -34,10 +34,30 @@ logger = logging.getLogger(__name__)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @require_http_methods(["POST"])
+def get_test_list(self, request):
+        project_dir = settings.BASE_DIR
+        test_files = []
+
+        for root, _, files in os.walk(project_dir):
+            for file in files:
+                if file.startswith("test") and file.endswith(".py"):
+                    relative_path = os.path.relpath(os.path.join(root, file), project_dir)
+                    test_files.append({file: relative_path})
+
+        return Response({"test_files": test_files})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@require_http_methods(["POST"])
 def run_test(self, request):
     """Trigger pytest as a background task."""
-    task = run_pytest.delay()  # Trigger Celery task
+    test_list = request.data.get("tests", [])
+    if not isinstance(test_list, list):
+        return Response({"error": "test_list must be a list"}, status=400)
+
+    task = run_selected_tests.delay(test_list)
     return Response({"task_id": task.id}, status=202)
+
 
 @api_view(['GET'])
 @require_http_methods(["GET"])

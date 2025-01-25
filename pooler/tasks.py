@@ -1,4 +1,5 @@
 import asyncio
+import os
 import subprocess
 
 from files.models import ExtractedData
@@ -6,21 +7,35 @@ from pooler.utils import get_email_bd_data, process_chunk_from_db
 
 from celery import app
 
+from root import settings
+
 
 @app.shared_task
-def run_pytest():
-    """Run pytest and return the output."""
+def run_selected_tests(test_files=None):
+    """
+    Run selected pytest scripts based on relative paths.
+    If no test_files are specified, all tests will run.
+    """
     try:
+        command = ["pytest", "--disable-warnings"]
+        
+        # Convert relative paths to absolute paths
+        if test_files:
+            absolute_paths = [
+                os.path.join(settings.BASE_DIR, test_file) for test_file in test_files
+            ]
+            command.extend(absolute_paths)
+
         process = subprocess.run(
-            ["pytest", "--json-report", "--disable-warnings"],
+            command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
         return {
-            "stdout": process.stdout,  # Standard output
-            "stderr": process.stderr,  # Error output
-            "returncode": process.returncode,  # 0 if tests passed
+            "stdout": process.stdout,
+            "stderr": process.stderr,
+            "returncode": process.returncode,
         }
     except Exception as e:
         return {"error": str(e)}
