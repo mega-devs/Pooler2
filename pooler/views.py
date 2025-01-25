@@ -46,7 +46,8 @@ def get_test_list(self):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @require_http_methods(["POST"])
-def run_test(self, request):
+@csrf_exempt
+def run_test(request):
     """Trigger pytest as a background task."""
     test_list = request.data.get("tests", [])
     if not isinstance(test_list, list):
