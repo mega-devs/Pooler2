@@ -31,10 +31,10 @@ from files.models import ExtractedData
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 logger = logging.getLogger(__name__)
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@require_http_methods(["POST"])
-def get_test_list(self, request):
+@require_http_methods(["GET"])
+def get_test_list(self):
         project_dir = settings.BASE_DIR
         test_files = []
 
