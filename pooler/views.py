@@ -37,11 +37,11 @@ logger = logging.getLogger(__name__)
 @require_http_methods(["GET"])
 def get_test_list(self):
     test_files = []
-    files = [str(file) for file in Path(settings.BASE_DIR.parent).rglob(f"test.py") if file.is_file()]
+    files = [str(file) for file in Path(settings.BASE_DIR.parent).rglob(f"tests.py") if file.is_file()]
     for file in files:
         file_name = os.path.basename(file)
-        test_files.append({{file_name: file}})
-    return Response({"test_files": test_files})
+        test_files.append({file_name: file})
+    return Response({"result": test_files})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
