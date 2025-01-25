@@ -1,11 +1,14 @@
 import json
+import logging
 import os
 import re
 import zipfile
 from datetime import datetime
 
+import requests
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.views import APIView
 from telethon import TelegramClient
 from asgiref.sync import async_to_sync
 
@@ -20,11 +23,13 @@ from rest_framework import status
 
 from adrf.decorators import api_view
 
-from .utils import is_valid_telegram_username, parse_messages, read_existing_messages, write_messages
-
+from .serializers import URLFileUploadSerializer, LocalFileUploadSerializer
+from .utils import is_valid_telegram_username, parse_messages, read_existing_messages, write_messages, save_file
 
 api_id = '29719825'
 api_hash = '7fa19eeed8c2e5d35036fafb9a716f18'
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = [
     '.txt', '.md', '.rtf', '.csv', '.log',
@@ -443,3 +448,46 @@ async def get_from_tg(request):
         os.remove(zip_filename)
         for file in files:
             os.remove(file)
+
+
+class LocalFileUploadView(APIView):
+    def post(self, request):
+        serializer = LocalFileUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            file = serializer.validated_data['file']
+            file_path = os.path.join(settings.COMBO_FILES_DIR, file.name)
+            logger.info(f"Received file: {file.name}, saving to {file_path}")
+
+            try:
+                save_file(file, file_path)
+                logger.info(f"File {file.name} uploaded successfully.")
+                return Response({'message': 'File uploaded successfully from local'}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.error(f"Failed to save the file: {e}")
+                return Response({'error': f'Failed to save the file: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        logger.warning(f"Serializer errors: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class URLFileUploadView(APIView):
+    def post(self, request):
+        serializer = URLFileUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            file_url = serializer.validated_data['file_url']
+
+            try:
+                response = requests.get(file_url)
+                response.raise_for_status()
+                file_name = file_url.split("/")[-1]
+                file_path = os.path.join(settings.COMBO_FILES_DIR, file_name)
+
+                save_file(response.content, file_path)
+                return Response({'message': 'File uploaded successfully from URL'}, status=status.HTTP_201_CREATED)
+
+            except requests.exceptions.RequestException as e:
+                return Response({'error': 'Failed to retrieve file from the URL'}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({f"error': 'Failed to save the file: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
