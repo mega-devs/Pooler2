@@ -43,10 +43,9 @@ def get_test_list(self):
         test_files[app] = file
     return Response({"result": test_files})
 
-@api_view(['POST'])
-@csrf_exempt
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
-@require_http_methods(["POST"])
+@require_http_methods(["GET"])
 def run_test(self, request):
     """Trigger pytest as a background task."""
     test_list = request.data.get("tests", [])
