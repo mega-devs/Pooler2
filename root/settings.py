@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'constance',
     'constance.backends.database',
     'dbbackup',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
