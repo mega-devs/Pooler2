@@ -3,6 +3,7 @@ import base64
 import logging
 from multiprocessing.pool import AsyncResult
 import os
+from pathlib import Path
 import zipfile
 import aiofiles
 import requests
@@ -32,19 +33,15 @@ os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 @require_http_methods(["GET"])
 def get_test_list(self):
-        project_dir = settings.BASE_DIR
-        test_files = []
-
-        for root, _, files in os.walk(project_dir):
-            for file in files:
-                if file.startswith("test") and file.endswith(".py"):
-                    relative_path = os.path.relpath(os.path.join(root, file), project_dir)
-                    test_files.append({file: relative_path})
-
-        return Response({"test_files": test_files})
+    test_files = []
+    files = [str(file) for file in Path(settings.BASE_DIR.parent).rglob(f"test.py") if file.is_file()]
+    for file in files:
+        file_name = os.path.basename(file)
+        test_files.append({{file_name: file}})
+    return Response({"test_files": test_files})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
