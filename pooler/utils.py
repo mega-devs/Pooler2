@@ -206,7 +206,7 @@ def imapCheck(email, password, imapServerName):
         return False
 
 
-async def process_chunk_from_file(chunk, results):
+async def process_chunk_from_file(chunk, results, uploaded_file):
     """
     Validates email addresses by checking SMTP and IMAP connectivity simultaneously.
     Verifies MX records on the server and server greeting.
@@ -246,6 +246,7 @@ async def process_chunk_from_file(chunk, results):
 
                     try:
                         print(f"Attempting to connect to MX server: {mx_record}")
+                        server_connect.settimeout(25)
                         server_connect.connect(mx_record)
                         code, message = server_connect.helo(server)
                         print(f"HELO response code: {code}, message: {message}")
@@ -270,7 +271,7 @@ async def process_chunk_from_file(chunk, results):
                             server_smtp.quit()
                         else:
                             smtp_status = False
-                        server_connect.quit()
+                        server_connect.quit()                        
                         
                     except Exception as ex:
                         print(f"Connection error details: {str(ex)}")
@@ -280,22 +281,30 @@ async def process_chunk_from_file(chunk, results):
                     print(f"DNS resolution error details: {str(ex)}")
                     logger.error(f"DNS resolution error for {email}: {ex}")
 
-                result = {
-                    'email': email,
-                    'password': password,
-                    'status': smtp_status,
-                    'imap_status': imap_status
+            await sync_to_async(ExtractedData.objects.update_or_create)(
+                email=email,
+                defaults={
+                    'smtp_is_valid': smtp_status,
+                    'imap_is_valid': imap_status,
+                    'uploaded_file': uploaded_file
                 }
-                print(f"Adding result: {result}")
-                results.append(result)
+            )
 
-                logger.info({
-                    'email': email,
-                    'password': password,
-                    'smtp_valid': smtp_status,
-                    'imap_valid': imap_status,
-                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                })
+            result = {
+                'email': email,
+                'password': password,
+                'status': smtp_status,
+                'imap_status': imap_status
+            }
+            results.append(result)
+
+            logger.info({
+                'email': email,
+                'password': password,
+                'smtp_valid': smtp_status,
+                'imap_valid': imap_status,
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            })
 
         except Exception as e:
             print(f"General error details: {str(e)}")
@@ -426,8 +435,10 @@ async def check_smtp_imap_emails_from_zip(filename):
     Results in updating database records for corresponding email addresses
     """
     results = []
-
-    file_path = os.path.join(settings.MEDIA_ROOT, "combofiles", filename)
+    
+    file_path = os.path.join('/app', 'combofiles', filename)
+    
+    logger.info(f"Processing file at: {file_path}")
 
     try:
         uploaded_file = await sync_to_async(UploadedFile.objects.get)(filename=filename)
@@ -447,16 +458,15 @@ async def check_smtp_imap_emails_from_zip(filename):
                         lines = f.readlines()
                         chunk_size = 100
                         chunked_lines = list(chunks(lines, chunk_size))
-                        tasks = [process_chunk_from_file(chunk, results) for chunk in chunked_lines]
+                        tasks = [process_chunk_from_file(chunk, results, uploaded_file) for chunk in chunked_lines]
                         await gather(*tasks)
     else:
         async with aiofiles.open(file_path, 'r') as f:
             lines = await f.readlines()
             chunk_size = 100
             chunked_lines = list(chunks(lines, chunk_size))
-            tasks = [process_chunk_from_file(chunk, results) for chunk in chunked_lines]
+            tasks = [process_chunk_from_file(chunk, results, uploaded_file) for chunk in chunked_lines]
             await gather(*tasks)
-
     for el in results:
         obj, created = await sync_to_async(ExtractedData.objects.update_or_create)(
             email=el['email'],
@@ -517,3 +527,30 @@ class LogFormatter:
     @staticmethod
     def format_telegram_fetch_log(timestamp, filename, url, size, lines, status):
         return f"{timestamp}|{filename}|{url}|{size}|{lines}|{status}"
+
+@app.task
+def auto_process_combo_files():
+    """
+    Automatically processes all files in media/combofiles directory
+    Returns the number of files processed
+    """
+    combo_dir = os.path.join(settings.MEDIA_ROOT, "combofiles")
+    processed_count = 0
+    
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    for filename in os.listdir(combo_dir):
+        if filename.endswith(('.txt', '.zip')):
+            try:
+                loop.run_until_complete(check_smtp_imap_emails_from_zip(filename))
+                processed_count += 1
+                logger.info(f"Successfully processed file: {filename}")
+            except Exception as e:
+                logger.error(f"Error processing file {filename}: {e}")
+                continue
+
+    return processed_count
