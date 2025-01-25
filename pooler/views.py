@@ -34,14 +34,14 @@ logger = logging.getLogger(__name__)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @require_http_methods(["POST"])
-def post(self, request):
+def run_test(self, request):
     """Trigger pytest as a background task."""
     task = run_pytest.delay()  # Trigger Celery task
     return Response({"task_id": task.id}, status=202)
 
 @api_view(['GET'])
 @require_http_methods(["GET"])
-def get(self, request, task_id):
+def get_test_logs(self, request, task_id):
     """Check the status of a Celery task."""
     task = AsyncResult(task_id)
     if task.state == "PENDING":
