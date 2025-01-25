@@ -10,4 +10,6 @@ urlpatterns = [
     path('download_files/', views.download_files_from_tg, name='download_files'),
     path('get_combofiles_from_tg/', views.get_combofiles_from_tg, name='get_combofiles_from_tg'),
     path('get_from_tg/', views.get_from_tg, name='get_from_tg'),
+    path('upload_file/', views.LocalFileUploadView.as_view()),
+    path('upload_file_by_url/', views.URLFileUploadView.as_view()),
 ]
