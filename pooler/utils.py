@@ -246,7 +246,6 @@ async def process_chunk_from_file(chunk, results, uploaded_file):
 
                     try:
                         print(f"Attempting to connect to MX server: {mx_record}")
-                        server_connect.settimeout(25)
                         server_connect.connect(mx_record)
                         code, message = server_connect.helo(server)
                         print(f"HELO response code: {code}, message: {message}")
