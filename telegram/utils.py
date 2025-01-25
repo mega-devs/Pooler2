@@ -1,9 +1,13 @@
 import json
+import logging
 import os
 import re
+import zipfile
 
 import aiofiles
 from django.http import JsonResponse
+
+logger = logging.getLogger(__name__)
 
 
 def is_valid_telegram_username(username):
@@ -50,3 +54,20 @@ async def write_messages(filename, messages):
     """
     async with aiofiles.open(filename, 'w', encoding='utf-8') as f:
         await f.write(json.dumps(messages, ensure_ascii=False, indent=4))
+
+
+def save_file(file, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    logger.info(f"Saving file to {path}")
+
+    if file.name.endswith('.zip'):
+        with zipfile.ZipFile(file, 'r') as zip_ref:
+            zip_ref.extractall(os.path.dirname(path))
+            logger.info(f"Extracted {len(zip_ref.namelist())} files from {file.name} to {os.path.dirname(path)}")
+    else:
+        with open(path, 'wb') as f:
+            content = file.read()
+            logger.info(f"File content size: {len(content)} bytes")
+            f.write(content)
+
+    logger.info("File saved successfully")

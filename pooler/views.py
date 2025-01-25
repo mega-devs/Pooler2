@@ -680,6 +680,30 @@ def download_logs_file(request):
     return Response(logs_data, status=200)
 
 
+@api_view(['GET'])
+@require_GET
+def get_valid_smtp(request):
+    """
+    Returns all valid SMTP entries from ExtractedData.
+    """
+    valid_smtp = ExtractedData.objects.filter(smtp_is_valid=True).values(
+        'email', 'password', 'provider', 'country', 'filename'
+    )
+    return JsonResponse({'valid_smtp': list(valid_smtp)})
+
+
+@api_view(['GET']) 
+@require_GET
+def get_valid_imap(request):
+    """
+    Returns all valid IMAP entries from ExtractedData.
+    """
+    valid_imap = ExtractedData.objects.filter(imap_is_valid=True).values(
+        'email', 'password', 'provider', 'country', 'filename'
+    )
+    return JsonResponse({'valid_imap': list(valid_imap)})
+
+
 #     imap_driver = ImapDriver()
 #     imap_results = []
 #

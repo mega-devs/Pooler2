@@ -400,3 +400,5 @@ CONSTANCE_CONFIG_FIELDSETS = {
 
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/app/backup/'}
+
+COMBO_FILES_DIR = os.path.join(MEDIA_ROOT, 'combofiles/')
