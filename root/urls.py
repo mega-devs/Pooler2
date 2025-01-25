@@ -12,6 +12,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from files.views import ExtractedDataModelViewSet, UploadedFileModelViewSet
 from proxy.views import ProxyViewSet, set_backup_delay, get_backup_delay
+from pooler.views import RunTestViewSet
 from root import settings
 from users.views import UserViewSet
 from django.conf import settings as main_settings
@@ -24,6 +25,7 @@ router.register('extracted-items', ExtractedDataModelViewSet)
 router.register('uploaded-items', UploadedFileModelViewSet)
 router.register('users', UserViewSet)
 router.register('proxy', ProxyViewSet)
+router.register('test', RunTestViewSet, basename='test')
 
 
 schema_view = get_schema_view(

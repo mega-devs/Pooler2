@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import logging
-from multiprocessing.pool import AsyncResult
 import os
 from pathlib import Path
 import zipfile
@@ -17,10 +16,14 @@ from django.views.decorators.http import require_GET, require_http_methods
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
+from celery.result import AsyncResult
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.viewsets import ViewSet
+from rest_framework.decorators import action
 
 import adrf.decorators as adrf
 
@@ -28,48 +31,54 @@ from .utils import extract_country_from_filename, read_logs
 from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_selected_tests
 from files.models import ExtractedData
 
-
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 logger = logging.getLogger(__name__)
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@require_http_methods(["GET"])
-def get_test_list(self):
-    test_files = {}
-    files = [str(file) for file in Path(settings.BASE_DIR.parent).rglob(f"tests.py") if file.is_file()]
-    for file in files:
-        app = file.split('/')[-2]
-        test_files[app] = file
-    return Response({"result": test_files})
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-@require_http_methods(["POST"])
-@csrf_exempt
-def run_test(request):
-    """Trigger pytest as a background task."""
-    test_list = request.data.get("tests", [])
-    if not isinstance(test_list, list):
-        return Response({"error": "test_list must be a list"}, status=400)
+class RunTestViewSet(ViewSet):
+    queryset = None
+    @action(detail=False, methods=['get'], url_path='', url_name='list')
+    def lists(self, request):
+        test_files = {}
+        base_dir = Path(settings.BASE_DIR.parent)  # Adjust as needed
+        files = [file for file in base_dir.rglob("tests.py") if file.is_file()]
+        for file in files:
+            app_name = file.parent.name  # Get the app folder name
+            test_files[app_name] = str(file.relative_to(base_dir))  # Store relative paths
 
-    task = run_selected_tests.delay(test_list)
-    return Response({"task_id": task.id}, status=202)
+        return Response({"result": test_files})
 
+    @action(detail=False, methods=['post'], url_path='run', url_name='run')
+    def run(self, request):
+        test_list = request.data.get("tests", [])
+        if not isinstance(test_list, list):
+            return Response({"error": "test_list must be a list"}, status=400)
 
-@api_view(['GET'])
-@require_http_methods(["GET"])
-def get_test_logs(self, request, task_id):
-    """Check the status of a Celery task."""
-    task = AsyncResult(task_id)
-    if task.state == "PENDING":
-        return Response({"status": "PENDING"})
-    elif task.state == "SUCCESS":
-        return Response({"status": "SUCCESS", "result": task.result})
-    elif task.state == "FAILURE":
-        return Response({"status": "FAILURE", "error": str(task.result)})
-    else:
-        return Response({"status": task.state})
+        base_dir = Path(settings.BASE_DIR.parent)
+        invalid_tests = [
+            test for test in test_list if not (base_dir / test).exists()
+        ]
+        
+        if invalid_tests:
+            return Response(
+                {"error": "The following test files do not exist", "invalid": invalid_tests},
+                status=400,
+            )
+
+        task = run_selected_tests.delay(test_list)
+        return Response({"task_id": task.id}, status=202)
+
+    @action(detail=True, methods=['get'], url_path='results', url_name='results')
+    def results(self, request, pk=None):
+        task = AsyncResult(pk)  # `pk` is the dynamic `task_id`
+        if task.state == "PENDING":
+            return Response({"status": "PENDING", "result": task.result})
+        elif task.state == "SUCCESS":
+            return Response({"status": "SUCCESS", "result": task.result})
+        elif task.state == "FAILURE":
+            return Response({"status": "FAILURE", "error": str(task.result)})
+        else:
+            return Response({"status": task.state})
 
 @swagger_auto_schema(
     method='get',
