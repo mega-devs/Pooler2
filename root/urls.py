@@ -11,7 +11,6 @@ from drf_yasg import openapi
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from files.views import ExtractedDataModelViewSet, UploadedFileModelViewSet
-from pooler.views import get_test_list, run_test
 from proxy.views import ProxyViewSet, set_backup_delay, get_backup_delay
 from root import settings
 from users.views import UserViewSet
@@ -25,9 +24,6 @@ router.register('extracted-items', ExtractedDataModelViewSet)
 router.register('uploaded-items', UploadedFileModelViewSet)
 router.register('users', UserViewSet)
 router.register('proxy', ProxyViewSet)
-router.register('test/list/', get_test_list, basename='test-list')
-router.register('test/runtest/', run_test, basename='run-test')
-router.register('test/<int:pk>', get_test_list, basename='get-test-list')
 
 
 schema_view = get_schema_view(
