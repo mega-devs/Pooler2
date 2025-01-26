@@ -17,9 +17,10 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from drf_yasg import openapi
+from rest_framework.viewsets import ModelViewSet
 
-from .serializers import ExtractedDataSerializer, UploadedFileSerializer
-from .models import UploadedFile, ExtractedData
+from .serializers import ExtractedDataSerializer, UploadedFileSerializer, URLFetcherSerializer
+from .models import UploadedFile, ExtractedData, URLFetcher
 from .forms import UploadedFileForm, ExtractedDataForm
 from .service import determine_origin
 from .tasks import async_handle_archive, async_process_uploaded_files
@@ -1033,3 +1034,8 @@ def uploaded_files_data(request):
     return JsonResponse({
         'statistics': stats,
     })
+
+
+class URLFetcherAPIView(ModelViewSet):
+    queryset = URLFetcher.objects.all()
+    serializer_class = URLFetcherSerializer

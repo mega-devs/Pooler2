@@ -10,7 +10,7 @@ from drf_yasg import openapi
 
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from files.views import ExtractedDataModelViewSet, UploadedFileModelViewSet
+from files.views import ExtractedDataModelViewSet, UploadedFileModelViewSet, URLFetcherAPIView
 from proxy.views import ProxyViewSet, set_backup_delay, get_backup_delay
 from pooler.views import RunTestViewSet
 from root import settings
@@ -25,6 +25,7 @@ router.register('extracted-items', ExtractedDataModelViewSet)
 router.register('uploaded-items', UploadedFileModelViewSet)
 router.register('users', UserViewSet)
 router.register('proxy', ProxyViewSet)
+router.register('url-fetcher', URLFetcherAPIView)
 router.register('test', RunTestViewSet, basename='test')
 
 
