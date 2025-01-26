@@ -56,7 +56,7 @@ def check_imap_emails_from_db():
     asyncio.run(async_gather(tasks))
 
     for el in imap_results:
-        ExtractedData.objects.filter(email=el['email']).update(imap_is_valid=el['status'])
+        ExtractedData.objects.filter(email=el['email']).update(imap_is_valid= True if el['status'] == 'valid' else None if el['status'] == 'invalid' else False)
 
 
 @app.shared_task
@@ -70,7 +70,7 @@ def check_smtp_emails_from_db():
     asyncio.run(async_gather(tasks))
 
     for el in smtp_results:
-        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid=el['status'])
+        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid= True if el['status'] == 'valid' else None if el['status'] == 'invalid' else False)
 
 
 async def async_gather(tasks):
