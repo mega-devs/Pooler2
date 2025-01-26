@@ -1,9 +1,12 @@
-from celery import shared_task
+import datetime
+import os
+
+from celery import shared_task, app
 from redis.exceptions import ConnectionError, ResponseError
 
 import logging
 
-from .models import UploadedFile
+from .models import UploadedFile, URLFetcher
 from .service import handle_archive, process_uploaded_files
 
 
@@ -39,3 +42,34 @@ def async_process_uploaded_files(self, base_upload_dir, uploaded_file_id):
     except Exception as e:
         logger.error(f"Ошибка обработки файлов из {base_upload_dir}: {e}")
         raise e
+
+
+@app.shared_task
+def fetch_files_from_url():
+    urls = URLFetcher.objects.all()
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    for url in urls:
+        dir_path = os.path.join(project_root, url.link)
+
+        total_files = 0
+        total_lines = 0
+        total_size = 0
+
+        for filename in os.listdir(dir_path):
+            file_full_path = os.path.join(dir_path, filename)
+            if os.path.isfile(file_full_path):
+                total_files += 1
+                total_size += os.path.getsize(file_full_path)
+
+                with open(file_full_path, 'r', encoding='utf-8') as file:
+                    lines = file.readlines()
+                    total_lines += len(lines)
+
+        url.total_files_fetched = total_files
+        url.total_lines_added = total_lines
+        url.total_size_fetched = total_size
+        url.last_time_fetched = datetime.datetime.now()
+        url.success = True
+        url.save()
+

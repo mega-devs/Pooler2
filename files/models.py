@@ -61,3 +61,12 @@ class ExtractedData(models.Model):
     class Meta:
         verbose_name = "Extracted Data"
         verbose_name_plural = "Extracted Data"
+
+
+class URLFetcher(models.Model):
+    link = models.CharField(max_length=255)
+    total_files_fetched = models.PositiveIntegerField(default=0)
+    total_lines_added = models.PositiveIntegerField(default=0)
+    total_size_fetched = models.DecimalField(default=0, decimal_places=2, max_digits=7)
+    last_time_fetched = models.DateTimeField(blank=True, null=True)
+    success = models.BooleanField(default=False)

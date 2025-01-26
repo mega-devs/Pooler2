@@ -46,6 +46,10 @@ app.conf.beat_schedule = {
         'task': 'pooler.tasks.run_selected_tests',
         'schedule': timedelta(seconds=300),
     },
+    'url_fetcher': {
+        'task': 'files.tasks.fetch_files_from_url',
+        'schedule': timedelta(seconds=30)
+    }
     # 'process-combo-files': {
     #     'task': 'pooler.utils.auto_process_combo_files',
     #     'schedule': timedelta(seconds=15),
