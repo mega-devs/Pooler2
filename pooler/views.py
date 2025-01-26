@@ -27,7 +27,7 @@ from rest_framework.decorators import action
 
 import adrf.decorators as adrf
 
-from .utils import extract_country_from_filename, read_logs
+from .utils import extract_country_from_filename, read_logs, clear_logs
 from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_selected_tests
 from files.models import ExtractedData
 
@@ -626,19 +626,37 @@ async def clear_temp_logs(request):
 def clear_full_logs(request):
     """
     Clears the full SMTP and IMAP log files.
-    
+
     Removes the log files from the filesystem if they exist.
-    Returns a JSON response indicating success or failure."""
+    Returns a JSON response indicating success or failure.
+    """
 
     smtp_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'smtp.log')
     imap_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'imap.log')
+    socks_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'socks.log')
+    telegram_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'telegram.log')
+    url_log_path = os.path.join(settings.BASE_DIR, "app", "data", "temp_logs", 'url.log')
+
+    clear_smtp = request.data.get('smtp', False)
+    clear_imap = request.data.get('imap', False)
+    clear_socks = request.data.get('socks', False)
+    clear_telegram = request.data.get('telegram', False)
+    clear_url = request.data.get('url', False)
 
     try:
-        os.remove(smtp_log_path)
-        os.remove(imap_log_path)
-        return Response({"message": "Logs cleared successfully"}, status=200)
-    except FileNotFoundError:
-        return Response({"message": "Log files not found"}, status=404)
+        if clear_smtp:
+            return clear_logs(smtp_log_path)
+        if clear_imap:
+            return clear_logs(imap_log_path)
+        if clear_socks:
+            return clear_logs(socks_log_path)
+        if clear_telegram:
+            return clear_logs(telegram_log_path)
+        if clear_url:
+            return clear_logs(url_log_path)
+
+        return Response({"message": "No logs specified for clearing"}, status=400)
+
     except Exception as e:
         return Response({"message": str(e)}, status=500)
     

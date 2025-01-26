@@ -11,6 +11,8 @@ from asyncio import gather
 from datetime import datetime
 
 import dns.resolver
+from rest_framework.response import Response
+
 from users.models import User
 from validate_email_address import validate_email
 from asgiref.sync import sync_to_async
@@ -563,3 +565,11 @@ def auto_process_combo_files():
 
     print(f"Finished processing. Total files processed: {processed_count}")
     return processed_count
+
+
+def clear_logs(path):
+    if os.path.exists(path):
+        os.remove(path)
+        return Response({"message": "Log cleared successfully"}, status=200)
+    else:
+        return Response({"message": "Log file not found"}, status=404)
