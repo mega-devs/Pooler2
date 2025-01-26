@@ -1,5 +1,6 @@
 import asyncio
 import os
+from pathlib import Path
 import subprocess
 
 from files.models import ExtractedData
@@ -20,11 +21,14 @@ def run_selected_tests(test_files=None):
         command = ["pytest", "--disable-warnings"]
         
         # Convert relative paths to absolute paths
+        base_dir = settings.BASE_DIR.parent  # Adjust as needed
+        absolute_paths = []
         if test_files:
-            absolute_paths = [
-                os.path.join(settings.BASE_DIR, test_file) for test_file in test_files
-            ]
-            command.extend(absolute_paths)
+            absolute_paths = [os.path.join(base_dir, test_file) for test_file in test_files]
+        else:
+            absolute_paths = [os.path.join(base_dir, file) for file in Path(base_dir).rglob("tests.py") if file.is_file()]
+
+        command.extend(absolute_paths)
 
         process = subprocess.run(
             command,
