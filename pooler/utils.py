@@ -336,12 +336,13 @@ async def process_chunk_from_db(chunk, smtp_results):
                         result_2 = validate_email(email, check_mx=False)
                         print(result_2)
                         if result_2:
-                            status = True
+                            status = 'valid'
                         elif result_2 == False:
-                            status = False
+                            status = 'invalid'
                         else:
-                            status = None
+                            status = 'error'
             except Exception as ex:
+                status = 'error'
                 print(ex)
 
         smtp_result = {'email': email, 'password': password, 'status': status,
@@ -361,7 +362,7 @@ async def process_chunk_from_db(chunk, smtp_results):
             user=email,
             port=port,
             response=str(code),
-            is_valid=status
+            status=status
         )
         
         async with aiofiles.open(settings.LOG_FILES['smtp'], 'a') as f:
@@ -374,7 +375,8 @@ async def process_chunk_from_db(chunk, smtp_results):
 @app.task
 async def imap_process_chunk_from_db(chunk, imap_results):
     """Validates email addresses via IMAP protocol using data loaded from database"""
-
+    thread_num = asyncio.current_task().get_name()
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     email = chunk.get('email')
     name, server = email.split('@')
     imap_server = 'imap.' + server
@@ -396,8 +398,10 @@ async def imap_process_chunk_from_db(chunk, imap_results):
                         else:
                             imap_status = 'invalid'
                     except Exception as ex:
+                        imap_status = 'error'
                         print(ex)
             except Exception as ex:
+                imap_status = 'error'
                 print(ex)
 
         imap_result = {'email': email, 'password': password, 'status': imap_status,
@@ -415,7 +419,7 @@ async def imap_process_chunk_from_db(chunk, imap_results):
             server=imap_server, 
             user=email,
             port=port,
-            is_valid=imap_status=='valid'
+            status=imap_status
         )
         
         async with aiofiles.open(settings.LOG_FILES['imap'], 'a') as f:
@@ -503,14 +507,14 @@ async def read_logs(ind):
 
 class LogFormatter:
     @staticmethod
-    def format_smtp_log(thread_num, timestamp, server, user, port, response, is_valid):
-        color = "GREEN" if is_valid else "RED"
-        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{response}"
+    def format_smtp_log(thread_num, timestamp, server, user, port, response, status):
+        color = "GREEN" if status == 'valid' else "YELLOW" if status == 'invalid' else "RED"
+        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{response}|{status}"
 
     @staticmethod
-    def format_imap_log(thread_num, timestamp, server, user, port, is_valid):
-        color = "GREEN" if is_valid else "RED"
-        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{'VALID' if is_valid else 'INVALID'}"
+    def format_imap_log(thread_num, timestamp, server, user, port, status):
+        color = "GREEN" if status == 'valid' else "YELLOW" if status == 'invalid' else "RED"
+        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{status}"
         
     @staticmethod
     def format_socks_log(thread_num, timestamp, proxy_port, result):

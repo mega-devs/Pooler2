@@ -432,7 +432,8 @@ async def get_logs(request):
                     'server': parts[3],
                     'user': parts[4],
                     'port': parts[5],
-                    'response': parts[6]
+                    'response': parts[6],
+                    'status': parts[7]
                 }
             return None
         except:
