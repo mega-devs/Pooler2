@@ -10,6 +10,7 @@ RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-k
 RUN apt update && apt install -y postgresql-client-16 libpq-dev
 
 COPY requirements.txt .
+COPY entrypoint.sh /app/entrypoint.sh
 
 RUN pip install --no-cache-dir -r requirements.txt
 

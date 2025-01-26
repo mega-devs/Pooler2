@@ -57,7 +57,7 @@ services:
     build:
       context: .
     container_name: pooler_celery
-    command: celery -A root worker -B --loglevel=INFO --concurrency=4
+    command: /app/entrypoint.sh
     volumes:
       - .:/app
       - ./data/temp_logs:/app/data/temp_logs
