@@ -284,9 +284,9 @@ class PoolerUtilsTestCase(APITestCase):
             user=user,
             port=port,
             response="250 OK",
-            is_valid=True
+            status="VALID"
         )
-        self.assertIn("GREEN", smtp_log)
+        self.assertIn("VALID", smtp_log)
         self.assertIn(thread_num, smtp_log)
         
         imap_log = LogFormatter.format_imap_log(
@@ -295,9 +295,8 @@ class PoolerUtilsTestCase(APITestCase):
             server=server,
             user=user,
             port=port,
-            is_valid=True
+            status="VALID"
         )
-        self.assertIn("GREEN", imap_log)
         self.assertIn("VALID", imap_log)
 
     async def test_read_logs(self):
