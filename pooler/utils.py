@@ -439,7 +439,7 @@ async def check_smtp_imap_emails_from_zip(filename):
     Results in updating database records for corresponding email addresses
     """
     results = []
-    file_path = os.path.join('/app', 'combofiles', filename)
+    file_path = os.path.join('/app/root/', 'uploads', filename)
     logger.info(f"Processing file at: {file_path}")
 
     try:
@@ -528,7 +528,7 @@ class LogFormatter:
     def format_telegram_fetch_log(timestamp, filename, url, size, lines, status):
         return f"{timestamp}|{filename}|{url}|{size}|{lines}|{status}"
 
-@app.task
+# @app.task
 def auto_process_combo_files():
     """
     Automatically processes all files in media/combofiles directory
