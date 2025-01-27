@@ -21,6 +21,7 @@ urlpatterns = [
     path('valid_imap/', views.get_valid_imap, name='valid-imap'),
     path('checking_smtp/', views.check_smtp_view, name='checking_smtp'),
     path('checking_imap/', views.check_imap_view, name='checking_imap'),
+    path('setting/', views.dynamic_settings, name='dynamic_settings'),
 ]
 
 if settings.DEBUG:

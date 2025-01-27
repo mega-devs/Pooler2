@@ -8,6 +8,7 @@ import aiofiles
 import requests
 
 from django.conf import settings
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.decorators.cache import cache_page
@@ -26,6 +27,8 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 
 import adrf.decorators as adrf
+
+from .apps import PoolerConfig
 
 from .utils import extract_country_from_filename, read_logs, clear_logs
 from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_selected_tests
@@ -341,7 +344,8 @@ def check_imap_view(request):
                                 'server': openapi.Schema(type=openapi.TYPE_STRING),
                                 'user': openapi.Schema(type=openapi.TYPE_STRING),
                                 'port': openapi.Schema(type=openapi.TYPE_STRING),
-                                'response': openapi.Schema(type=openapi.TYPE_STRING)
+                                'response': openapi.Schema(type=openapi.TYPE_STRING),
+                                'status': openapi.Schema(type=openapi.TYPE_STRING)
                             }
                         )
                     ),
@@ -424,16 +428,15 @@ async def get_logs(request):
     async def parse_smtp_log(line):
         try:
             parts = line.strip().split('|')
-            if len(parts) >= 7:
+            if len(parts) >= 6:
                 return {
-                    'color': parts[0],
-                    'thread_num': parts[1],
-                    'timestamp': parts[2],
-                    'server': parts[3],
-                    'user': parts[4],
-                    'port': parts[5],
-                    'response': parts[6],
-                    'status': parts[7]
+                    'thread_num': parts[0],
+                    'timestamp': parts[1],
+                    'server': parts[2],
+                    'user': parts[3],
+                    'port': parts[4],
+                    'response': parts[5],
+                    'status': parts[6]
                 }
             return None
         except:
@@ -442,15 +445,14 @@ async def get_logs(request):
     async def parse_imap_log(line):
         try:
             parts = line.strip().split('|')
-            if len(parts) >= 7:
+            if len(parts) >= 6:
                 return {
-                    'color': parts[0],
-                    'thread_num': parts[1],
-                    'timestamp': parts[2],
-                    'server': parts[3],
-                    'user': parts[4],
-                    'port': parts[5],
-                    'status': parts[6]
+                    'thread_num': parts[0],
+                    'timestamp': parts[1],
+                    'server': parts[2],
+                    'user': parts[3],
+                    'port': parts[4],
+                    'status': parts[5]
                 }
             return None
         except:
@@ -732,6 +734,30 @@ def get_valid_imap(request):
     )
     return JsonResponse({'valid_imap': list(valid_imap)})
 
+
+@api_view(['GET', 'POST'])
+def dynamic_settings(request):
+    if request.method == 'POST':
+        # Set a dynamic setting
+        key = request.data.get('key')
+        value = request.data.get('value')
+
+        if not key or value is None:
+            return JsonResponse({'error': 'Key and value are required'}, status=400)
+
+        if key == 'debug':
+            is_enabled = request.data.get('debug', True)
+            setattr(settings, "LOGGING_ENABLED", is_enabled)
+
+            # to persist across multiple workers
+            cache.set('LOGGING_ENABLED', is_enabled, timeout=None)
+
+        PoolerConfig.set_setting(key, value)
+        return JsonResponse({'message': f'Setting {key} updated successfully'})
+
+    elif request.method == 'GET':
+        # Retrieve all dynamic settings
+        return JsonResponse(PoolerConfig.settings)
 
 #     imap_driver = ImapDriver()
 #     imap_results = []

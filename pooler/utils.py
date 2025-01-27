@@ -232,7 +232,7 @@ async def process_chunk_from_file(chunk, results, uploaded_file):
 
         try:
             # Fixed regex pattern without backticks
-            match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})', email)
+            match = re.match(r'^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})', email)
             if match:
                 print(f"Email format valid: {email}")
                 try:
@@ -322,7 +322,7 @@ async def process_chunk_from_db(chunk, smtp_results):
     port = 587
 
     try:
-        match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
+        match = re.match(r'^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
         if match:
             try:
                 records = dns.resolver.resolve("mail.ru", 'MX')
@@ -338,13 +338,13 @@ async def process_chunk_from_db(chunk, smtp_results):
                         result_2 = validate_email(email, check_mx=False)
                         print(result_2)
                         if result_2:
-                            status = 'valid'
+                            status = 'VALID'
                         elif result_2 == False:
-                            status = 'invalid'
+                            status = 'INVALID'
                         else:
-                            status = 'error'
+                            status = 'ERROR'
             except Exception as ex:
-                status = 'error'
+                status = 'ERROR'
                 print(ex)
 
         smtp_result = {'email': email, 'password': password, 'status': status,
@@ -386,7 +386,7 @@ async def imap_process_chunk_from_db(chunk, imap_results):
     port = 993
 
     try:
-        match = re.match('^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
+        match = re.match(r'^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$', email)
         if match:
             try:
                 records = dns.resolver.resolve("mail.ru", 'MX')
@@ -396,14 +396,14 @@ async def imap_process_chunk_from_db(chunk, imap_results):
                     try:
                         imap_check_result = imapCheck(email, password, imap_server)
                         if imap_check_result:
-                            imap_status = 'valid'
+                            imap_status = 'VALID'
                         else:
-                            imap_status = 'invalid'
+                            imap_status = 'INVALID'
                     except Exception as ex:
-                        imap_status = 'error'
+                        imap_status = 'ERROR'
                         print(ex)
             except Exception as ex:
-                imap_status = 'error'
+                imap_status = 'ERROR'
                 print(ex)
 
         imap_result = {'email': email, 'password': password, 'status': imap_status,
@@ -510,13 +510,11 @@ async def read_logs(ind):
 class LogFormatter:
     @staticmethod
     def format_smtp_log(thread_num, timestamp, server, user, port, response, status):
-        color = "GREEN" if status == 'valid' else "YELLOW" if status == 'invalid' else "RED"
-        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{response}|{status}"
+        return f"{thread_num}|{timestamp}|{server}|{user}|{port}|{response}|{status}"
 
     @staticmethod
     def format_imap_log(thread_num, timestamp, server, user, port, status):
-        color = "GREEN" if status == 'valid' else "YELLOW" if status == 'invalid' else "RED"
-        return f"{color}|{thread_num}|{timestamp}|{server}|{user}|{port}|{status}"
+        return f"{thread_num}|{timestamp}|{server}|{user}|{port}|{status}"
         
     @staticmethod
     def format_socks_log(thread_num, timestamp, proxy_port, result):

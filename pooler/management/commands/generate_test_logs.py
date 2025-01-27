@@ -18,18 +18,17 @@ class Command(BaseCommand):
         urls = ['http://example1.com', 'http://example2.com', 'http://example3.com']
         file_sizes = ['1.2MB', '650KB', '2.1GB']
         line_counts = ['1000', '2500', '5000']
+        checker_statuses = ['VALID', 'INVALID', 'ERROR']
         statuses = ['CLEANED', 'DOWNLOADED', 'FILTERED', 'CHECKED']
 
         async with aiofiles.open(settings.LOG_FILES['smtp'], 'w') as f:
             for i in range(20):
-                color = random.choice(['GREEN', 'RED'])
-                log_entry = f"{color}|Thread-{i}|{datetime.now()}|{random.choice(servers)}|{random.choice(users)}|{random.choice(ports)}|{random.choice(responses)}\n"
+                log_entry = f"Thread-{i}|{datetime.now()}|{random.choice(servers)}|{random.choice(users)}|{random.choice(ports)}|{random.choice(responses)}|{random.choice(checker_statuses)}\n"
                 await f.write(log_entry)
 
         async with aiofiles.open(settings.LOG_FILES['imap'], 'w') as f:
             for i in range(20):
-                color = random.choice(['GREEN', 'RED'])
-                log_entry = f"{color}|Thread-{i}|{datetime.now()}|{random.choice(servers)}|{random.choice(users)}|{random.choice(ports)}|{'VALID' if color == 'GREEN' else 'INVALID'}\n"
+                log_entry = f"Thread-{i}|{datetime.now()}|{random.choice(servers)}|{random.choice(users)}|{random.choice(ports)}|{random.choice(checker_statuses)}\n"
                 await f.write(log_entry)
 
         async with aiofiles.open(settings.LOG_FILES['socks'], 'w') as f:

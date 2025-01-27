@@ -25,13 +25,11 @@ def run_selected_tests(test_files=None):
         absolute_paths = []
         if test_files:
             absolute_paths = [os.path.join(base_dir, test_file) for test_file in test_files]
-        else:
-            absolute_paths = [os.path.join(base_dir, file) for file in Path(base_dir).rglob("tests.py") if file.is_file()]
 
         command.extend(absolute_paths)
 
         process = subprocess.run(
-            command,
+            " ".join(command),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -56,7 +54,7 @@ def check_imap_emails_from_db():
     asyncio.run(async_gather(tasks))
 
     for el in imap_results:
-        ExtractedData.objects.filter(email=el['email']).update(imap_is_valid= True if el['status'] == 'valid' else None if el['status'] == 'invalid' else False)
+        ExtractedData.objects.filter(email=el['email']).update(imap_is_valid= True if el['status'] == 'VALID' else None if el['status'] == 'INVALID' else False)
 
 
 @app.shared_task
@@ -70,7 +68,7 @@ def check_smtp_emails_from_db():
     asyncio.run(async_gather(tasks))
 
     for el in smtp_results:
-        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid= True if el['status'] == 'valid' else None if el['status'] == 'invalid' else False)
+        ExtractedData.objects.filter(email=el['email']).update(smtp_is_valid= True if el['status'] == 'VALID' else None if el['status'] == 'INVALID' else False)
 
 
 async def async_gather(tasks):

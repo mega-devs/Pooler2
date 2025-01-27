@@ -151,6 +151,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # logging conf
+LOGGING_ENABLED = True
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -160,15 +161,22 @@ LOGGING = {
             'style': '{',
         },
     },
+    'filters': {
+        'logging_control': {
+            '()': 'pooler.filters.DynamicLoggingFilter',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'filters': ['logging_control'],
         },
         'file': {
             'class': 'logging.FileHandler',
             'filename': 'debug.log',
             'formatter': 'verbose',
+            'filters': ['logging_control'],
         },
     },
     'root': {
@@ -187,8 +195,8 @@ APPEND_SLASH = False
 UPLOAD_ROOT = os.path.join(BASE_DIR, 'uploads')
 
 # Celery
-CELERY_BROKER_URL = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
@@ -256,7 +264,7 @@ TRACK_USING_GEOIP = True
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": 'redis://redis:6379/1',
+        "LOCATION": 'redis://127.0.0.1:6379/1',
     }
 }
 
@@ -284,7 +292,7 @@ EMAIL_USE_TLS = env('EMAIL_USE_TLS')  # True
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
-REDIS_URL = "redis://redis:6379"
+REDIS_URL = "redis://127.0.0.1:6379"
 
 # Silk settings
 SILKY_PYTHON_PROFILER = True
