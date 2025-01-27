@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import mimetypes
@@ -17,7 +18,11 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from drf_yasg import openapi
+from pooler.utils import check_smtp_imap_emails_from_zip
 from rest_framework.viewsets import ModelViewSet
+
+import logging
+from rest_framework.decorators import api_view
 
 from .serializers import ExtractedDataSerializer, UploadedFileSerializer, URLFetcherSerializer
 from .models import UploadedFile, ExtractedData, URLFetcher
@@ -1036,6 +1041,61 @@ def uploaded_files_data(request):
     })
 
 
+@swagger_auto_schema(
+    method='post',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
+@api_view(['POST'])
+@require_POST
+def process_uploaded_file(request, pk):
+    """
+    Starts asynchronous processing of an uploaded file.
+    """
+    try:        
+        file_obj = get_object_or_404(UploadedFile, pk=pk)
+        print(f"Processing file with id {pk}")
+        file_path = file_obj.file_path
+
+        asyncio.run(check_smtp_imap_emails_from_zip(file_path))
+
+        return JsonResponse({
+            'message': f"File '{file_obj.filename}' processing started."
+        }, status=200)
+    except Exception as e:
+        logger.error(f"Error processing file with id {pk}: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
 class URLFetcherAPIView(ModelViewSet):
     queryset = URLFetcher.objects.all()
     serializer_class = URLFetcherSerializer
+

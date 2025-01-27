@@ -12,6 +12,8 @@ RUN apt update && apt install -y postgresql-client-16 libpq-dev
 COPY requirements.txt .
 COPY entrypoint.sh /app/entrypoint.sh
 
+RUN chmod +x /app/entrypoint.sh
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir -p app/data/temp_logs

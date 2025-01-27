@@ -1,7 +1,7 @@
 from django.urls import path
 from .apps import FilesConfig
 from .views import (
-    uploaded_files_data, uploaded_files_list, uploaded_file_update, uploaded_file_delete,
+    process_uploaded_file, uploaded_files_data, uploaded_files_list, uploaded_file_update, uploaded_file_delete,
     upload_combofile, download_file, panel_table, download_txt, extracted_data_update, extracted_data_delete
 )
 
@@ -18,4 +18,5 @@ urlpatterns = [
     path('data/<int:pk>/edit/', extracted_data_update, name='extracted_data_update'),
     path('data/<int:pk>/delete/', extracted_data_delete, name='extracted_data_delete'),
     path('uploaded_files/data/', uploaded_files_data, name='uploaded-files-data'),
+    path('run_checking/<int:pk>/', process_uploaded_file, name='process_uploaded_file'),
 ]
