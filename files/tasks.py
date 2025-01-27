@@ -4,13 +4,11 @@ import os
 from celery import shared_task, app
 from redis.exceptions import ConnectionError, ResponseError
 
-import logging
-
 from .models import UploadedFile, URLFetcher
 from .service import handle_archive, process_uploaded_files
+from root.logger import getLogger
 
-
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 @shared_task(
