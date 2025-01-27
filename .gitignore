@@ -103,3 +103,5 @@ session_name.session
 celerybeat-schedule
 
 backup
+
+root/uploads
