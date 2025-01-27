@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import re
 import zipfile
@@ -7,7 +6,9 @@ import zipfile
 import aiofiles
 from django.http import JsonResponse
 
-logger = logging.getLogger(__name__)
+from root.logger import getLogger
+
+logger = getLogger(__name__)
 
 
 def is_valid_telegram_username(username):

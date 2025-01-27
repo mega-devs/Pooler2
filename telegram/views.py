@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import re
 import zipfile
@@ -29,7 +28,9 @@ from .utils import is_valid_telegram_username, parse_messages, read_existing_mes
 api_id = '29719825'
 api_hash = '7fa19eeed8c2e5d35036fafb9a716f18'
 
-logger = logging.getLogger(__name__)
+from root.logger import getLogger
+
+logger = getLogger(__name__)
 
 ALLOWED_EXTENSIONS = [
     '.txt', '.md', '.rtf', '.csv', '.log',

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import mimetypes
 import re
@@ -21,7 +20,6 @@ from drf_yasg import openapi
 from pooler.utils import check_smtp_imap_emails_from_zip
 from rest_framework.viewsets import ModelViewSet
 
-import logging
 from rest_framework.decorators import api_view
 
 from .serializers import ExtractedDataSerializer, UploadedFileSerializer, URLFetcherSerializer
