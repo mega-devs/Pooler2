@@ -32,7 +32,9 @@ from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
 
 
-logger = logging.getLogger(__name__)
+from root.logger import getLogger
+
+logger = getLogger(__name__)
 
 # @swagger_auto_schema(
 #     methods=['post'],
