@@ -2,7 +2,7 @@ from django.urls import path
 from .apps import FilesConfig
 from .views import (
     file_details, process_uploaded_file, processing_summary, uploaded_files_data, uploaded_files_list, uploaded_file_update, uploaded_file_delete,
-    upload_combofile, download_file, panel_table, download_txt, extracted_data_update, extracted_data_delete
+    upload_combofile, download_file, panel_table, download_txt, extracted_data_update, extracted_data_delete, error_summary
 )
 
 app_name = FilesConfig.name
@@ -21,4 +21,5 @@ urlpatterns = [
     path('run_checking/<int:pk>/', process_uploaded_file, name='process_uploaded_file'),
     path('file_details/<int:pk>/', file_details, name='file_details'),
     path('processing_summary/<int:pk>/', processing_summary, name='processing_summary'),
+    path('error_summary/', error_summary, name='error_summary'),
 ]

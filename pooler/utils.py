@@ -209,13 +209,14 @@ def imapCheck(email, password, imapServerName):
         return False
 
 
-async def process_chunk_from_file(chunk, results, uploaded_file):
+async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
     """
     Validates email addresses by checking SMTP and IMAP connectivity simultaneously.
-    Verifies MX records on the server and server greeting.
-    Email data is loaded from a zip archive.
     """
+    line_number = start_line
+    
     for cred in chunk:
+        line_number += 1
         print(f"Processing credential: {cred}")
         if "|" not in cred and ":" not in cred:
             print(f"Skipping invalid format - no separator: {cred}")
@@ -232,14 +233,13 @@ async def process_chunk_from_file(chunk, results, uploaded_file):
         imap_status = None
 
         try:
-            # Fixed regex pattern without backticks
             match = re.match(r'^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})', email)
             if match:
                 print(f"Email format valid: {email}")
                 try:
                     # Use email domain for MX lookup
                     email_domain = email.split('@')[1]
-                    print(f"Looking up MX records for domain: {email_domain}")
+                    print(f"Looking up MX records for domain: {email_domain}")                                     
                     records = dns.resolver.resolve(email_domain, 'MX')
                     mx_record = str(records[0].exchange)
                     print(f"Found MX record: {mx_record}")
@@ -287,29 +287,32 @@ async def process_chunk_from_file(chunk, results, uploaded_file):
                 defaults={
                     'smtp_is_valid': smtp_status,
                     'imap_is_valid': imap_status,
-                    'uploaded_file': uploaded_file
+                    'uploaded_file': uploaded_file,
+                    'line_number': line_number
                 }
             )
 
             result = {
                 'email': email,
-                'password': password,
+                'password': password, 
                 'status': smtp_status,
-                'imap_status': imap_status
+                'imap_status': imap_status,
+                'line_number': line_number
             }
             results.append(result)
 
             logger.info({
                 'email': email,
                 'password': password,
-                'smtp_valid': smtp_status,
+                'smtp_valid': smtp_status, 
                 'imap_valid': imap_status,
+                'line_number': line_number,
                 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
 
         except Exception as e:
             print(f"General error details: {str(e)}")
-            logger.error(f"Error processing email {email}: {e}")
+            logger.error(f"Error processing email {email} at line {line_number}: {e}")
 
 
 async def process_chunk_from_db(chunk, smtp_results):
@@ -432,12 +435,9 @@ async def imap_process_chunk_from_db(chunk, imap_results):
         logger.error(f"Error checking connection for email {email}: {e}")
 
 
-@app.task
 async def check_smtp_imap_emails_from_zip(filename):
     """
-    Main function for checking SMTP and IMAP email addresses, 
-    handles archive processing and passes data to process_chunk_from_file function. 
-    Results in updating database records for corresponding email addresses
+    Main function for processing files
     """
     results = []
     file_path = os.path.join('/app/root/', 'uploads', filename)
@@ -461,22 +461,30 @@ async def check_smtp_imap_emails_from_zip(filename):
                         lines = f.readlines()
                         chunk_size = 100
                         chunked_lines = list(chunks(lines, chunk_size))
-                        tasks = [process_chunk_from_file(chunk, results, uploaded_file) for chunk in chunked_lines]
+                        tasks = []
+                        for i, chunk in enumerate(chunked_lines):
+                            start_line = i * chunk_size
+                            tasks.append(process_chunk_from_file(chunk, results, uploaded_file, start_line))
                         await gather(*tasks)
     else:
         async with aiofiles.open(file_path, 'r') as f:
             lines = await f.readlines()
             chunk_size = 100
             chunked_lines = list(chunks(lines, chunk_size))
-            tasks = [process_chunk_from_file(chunk, results, uploaded_file) for chunk in chunked_lines]
+            tasks = []
+            for i, chunk in enumerate(chunked_lines):
+                start_line = i * chunk_size
+                tasks.append(process_chunk_from_file(chunk, results, uploaded_file, start_line))
             await gather(*tasks)
+
     for el in results:
         obj, created = await sync_to_async(ExtractedData.objects.update_or_create)(
             email=el['email'],
             defaults={
                 'smtp_is_valid': el['status'],
                 'imap_is_valid': el['imap_status'],
-                'uploaded_file': uploaded_file
+                'uploaded_file': uploaded_file,
+                'line_number': el['line_number']
             }
         )
 

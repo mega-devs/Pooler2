@@ -1200,3 +1200,35 @@ def processing_summary(request, pk):
     }
 
     return JsonResponse(summary)
+
+
+@api_view(['GET'])
+def error_summary(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+    missing_email_count = ExtractedData.objects.filter(email='').count()
+    missing_email_examples = ExtractedData.objects.filter(email='').values('line_number', 'email')[:5]
+
+    invalid_email_count = ExtractedData.objects.filter(email__regex=r'^[^@]+@[^@]+\.[^@]+$').count()
+    invalid_email_examples = ExtractedData.objects.filter(email__regex=r'^[^@]+@[^@]+\.[^@]+$').values('line_number', 'email')[:5]
+
+    duplicate_email_count = ExtractedData.objects.values('email').annotate(email_count=Count('email')).filter(email_count__gt=1).count()
+    duplicate_email_examples = ExtractedData.objects.values('email').annotate(email_count=Count('email')).filter(email_count__gt=1).values('email', 'line_number', 'email_count')[:5]
+
+    error_summary = {
+        "Missing Email Address": {
+            "count": missing_email_count,
+            "examples": list(missing_email_examples)
+        },
+        "Invalid Email Format": {
+            "count": invalid_email_count,
+            "examples": list(invalid_email_examples)
+        },
+        "Duplicate Records": {
+            "count": duplicate_email_count,
+            "examples": list(duplicate_email_examples)
+        }
+    }
+
+    return JsonResponse(error_summary)
