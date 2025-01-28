@@ -521,8 +521,8 @@ class LogFormatter:
         return f"{thread_num}|{timestamp}|{proxy_port}|{result}"
 
     @staticmethod
-    def format_url_fetch_log(timestamp, filename, url, size, lines, status):
-        return f"{timestamp}|{filename}|{url}|{size}|{lines}|{status}"
+    def format_url_fetch_log(thread_num, timestamp, filename, url, size, lines, status):
+        return f"{thread_num}|{timestamp}|{filename}|{url}|{size}|{lines}|{status}"
 
     @staticmethod
     def format_telegram_fetch_log(timestamp, filename, url, size, lines, status):

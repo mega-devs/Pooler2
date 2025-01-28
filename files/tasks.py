@@ -1,8 +1,13 @@
+import asyncio
 import datetime
 import os
 
+import aiofiles
 from celery import shared_task, app
 from redis.exceptions import ConnectionError, ResponseError
+
+from pooler.utils import LogFormatter
+from root import settings
 
 from .models import UploadedFile, URLFetcher
 from .service import handle_archive, process_uploaded_files
@@ -43,10 +48,13 @@ def async_process_uploaded_files(self, base_upload_dir, uploaded_file_id):
 
 
 @app.shared_task
-def fetch_files_from_url():
+async def fetch_files_from_url():
+    thread_num = asyncio.current_task().get_name()
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     urls = URLFetcher.objects.all()
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+    log_entries = []
     for url in urls:
         dir_path = os.path.join(project_root, url.link)
 
@@ -56,13 +64,33 @@ def fetch_files_from_url():
 
         for filename in os.listdir(dir_path):
             file_full_path = os.path.join(dir_path, filename)
-            if os.path.isfile(file_full_path):
-                total_files += 1
-                total_size += os.path.getsize(file_full_path)
+            status = "INVALID"
+            size = 0
+            lines = 0
+            try:
+                if os.path.isfile(file_full_path):
+                    total_files += 1
+                    size = os.path.getsize(file_full_path)
+                    total_size += size
 
-                with open(file_full_path, 'r', encoding='utf-8') as file:
-                    lines = file.readlines()
-                    total_lines += len(lines)
+                    with open(file_full_path, 'r', encoding='utf-8') as file:
+                        lines = file.readlines()
+                        total_lines += len(lines)
+                        status = "VALID"
+            except:
+                status = "ERROR"
+            # Add formatted logging
+            log_entry = LogFormatter.format_url_fetch_log(
+                thread_num,
+                timestamp, 
+                filename,
+                url.link,
+                size,
+                lines,
+                status
+            )
+
+            log_entries.append(log_entry)
 
         url.total_files_fetched = total_files
         url.total_lines_added = total_lines
@@ -71,3 +99,6 @@ def fetch_files_from_url():
         url.success = True
         url.save()
 
+        
+        async with aiofiles.open(settings.LOG_FILES['smtp'], 'a') as f:
+            await f.write("\n".join(log_entries) + '\n')
