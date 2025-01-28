@@ -22,7 +22,7 @@ import ssl
 import socket
 import imaplib
 import json
-from inc_etc import result
+from .inc_etc import result
 
 # [VARIABLES AND OTHER STUFF]
 # ---------------------------

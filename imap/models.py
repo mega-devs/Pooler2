@@ -6,7 +6,6 @@ from users.models import User
 class ImapConfig(models.Model):
     timeout = models.FloatField()
     threads = models.PositiveSmallIntegerField()
-    email = models.EmailField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -15,9 +14,10 @@ class Combo(models.Model):
     email = models.EmailField()
     password = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.email}"
+        return f"{self.email}:{self.password}"
 
 
 class IMAPCheckResult(models.Model):
@@ -28,7 +28,6 @@ class IMAPCheckResult(models.Model):
 
     combo = models.ForeignKey(Combo, on_delete=models.CASCADE, related_name="check_results")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="imap_check_results")
-    proxy_config = models.ForeignKey(ImapConfig, on_delete=models.CASCADE, related_name="imap_results")
     status = models.CharField(max_length=4, choices=STATUS_CHOICES)
     checked_at = models.DateTimeField(auto_now_add=True)
 
