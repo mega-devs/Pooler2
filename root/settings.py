@@ -307,7 +307,7 @@ JAZZMIN_SETTINGS = {
 
     # Top Menu #
     'topmenu_links': [
-        {'name': 'Home', 'url': 'http://127.0.0.1:8000/', 'permissions': ['auth.view_user']},
+        {'name': 'Home', 'url': 'http://95.215.108.118/', 'permissions': ['auth.view_user']},
         {'name': 'Support', 'url': 'https://support.example.com', 'new_window': True},
     ],
 

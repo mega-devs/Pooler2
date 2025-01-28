@@ -29,7 +29,7 @@ def run_selected_tests(test_files=None):
         command.extend(absolute_paths)
 
         process = subprocess.run(
-            " ".join(command),
+            command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

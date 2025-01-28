@@ -1,9 +1,13 @@
-import logging
+import asyncio
 import os
 import mimetypes
 import re
 from random import sample
+import threading
+from datetime import datetime
+from django.db.models import Count, Q
 
+from django.utils import timezone
 from django.db.models import Sum, Count
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
@@ -17,7 +21,9 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from drf_yasg import openapi
+from pooler.utils import check_smtp_imap_emails_from_zip, process_smtp_imap_background
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import api_view
 
 from .serializers import ExtractedDataSerializer, UploadedFileSerializer, URLFetcherSerializer
 from .models import UploadedFile, ExtractedData, URLFetcher
@@ -32,7 +38,9 @@ from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
 
 
-logger = logging.getLogger(__name__)
+from root.logger import getLogger
+
+logger = getLogger(__name__)
 
 # @swagger_auto_schema(
 #     methods=['post'],
@@ -1036,6 +1044,159 @@ def uploaded_files_data(request):
     })
 
 
+@swagger_auto_schema(
+    method='post',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        404: openapi.Response(
+            'Not Found',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        500: openapi.Response(
+            'Error',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+    }
+)
+@api_view(['POST'])
+@require_POST
+def process_uploaded_file(request, pk):
+    """
+    Return an immediate 200 response, then run extra logic in a background thread.
+    """
+    file_obj = get_object_or_404(UploadedFile, pk=pk)
+    file_path = file_obj.file_path
+    
+    response = JsonResponse({
+        'message': f"File '{file_obj.filename}' found. Background process starting..."
+    }, status=200)
+    
+    def run_after_response():
+        print(f"Background thread started for file with id {pk} at path {file_path}")        
+        process_smtp_imap_background(file_path)
+        print(f"Completed background process for file: {file_path}")
+
+    thread = threading.Thread(target=run_after_response, daemon=True)
+    thread.start()
+
+    return response
+
+
 class URLFetcherAPIView(ModelViewSet):
     queryset = URLFetcher.objects.all()
     serializer_class = URLFetcherSerializer
+
+
+
+@api_view(['GET'])
+def file_details(request, pk):
+    """
+    Retrieve file details for a single UploadedFile instance.
+    Returns a JSON response including file name, size, user, date, type, and total rows.
+    """
+    file_obj = get_object_or_404(UploadedFile, pk=pk)
+    
+    if not file_obj.file_size:
+        try:
+            file_obj.file_size = file_obj.file.size
+            file_obj.save()
+            logger.info(f"File size updated for file {file_obj.filename}: {file_obj.file_size}")
+        except Exception as e:
+            file_obj.file_size = 'N/A'
+            logger.error(f"Could not determine file size for {file_obj.filename}: {e}")
+    
+    if not file_obj.file_type:
+        try:
+            file_extension = file_obj.filename.split('.')[-1].lower()
+            file_obj.file_type = file_extension
+            file_obj.save()
+            logger.info(f"File type updated for file {file_obj.filename}: {file_obj.file_type}")
+        except Exception as e:
+            file_obj.file_type = 'N/A'
+            logger.error(f"Could not determine file type for {file_obj.filename}: {e}")
+    
+    if not file_obj.total_rows_in_file:
+        try:
+            with open(file_obj.file_path, 'r') as f:
+                file_obj.total_rows_in_file = sum(1 for line in f)
+            file_obj.save()
+            logger.info(f"Total rows updated for file {file_obj.filename}: {file_obj.total_rows_in_file}")
+        except Exception as e:
+            file_obj.total_rows_in_file = 0
+            logger.error(f"Could not determine total rows for {file_obj.filename}: {e}")
+
+    data = {
+        'file_name': file_obj.filename,
+        'file_size': file_obj.file_size or 'N/A',
+        'uploaded_by': f"{file_obj.user.username} ({'Admin' if file_obj.user.is_superuser else 'User'})",
+        'upload_date': file_obj.upload_date.strftime("%Y-%m-%d %H:%M:%S"),
+        'file_type': file_obj.file_type or 'N/A',
+        'total_rows_in_file': file_obj.total_rows_in_file,
+    }
+    logger.info(f"File details retrieved for {file_obj.filename}")
+    return JsonResponse(data)
+
+
+@api_view(['GET'])
+def processing_summary(request, pk):
+    try:
+        latest_file = UploadedFile.objects.get(pk=pk)
+    except UploadedFile.DoesNotExist:
+        return JsonResponse({
+            "message": "No files have been uploaded yet."
+        }, status=404)
+
+    start_time = latest_file.processing_start_time or latest_file.upload_date
+    end_time = latest_file.processing_end_time or timezone.now()
+    processing_duration = end_time - start_time
+
+    total_rows_processed = latest_file.total_rows_in_file if latest_file.total_rows_in_file else 0
+
+    valid_entries = ExtractedData.objects.filter(
+        uploaded_file=latest_file, 
+        smtp_is_valid=True, 
+        imap_is_valid=True
+    ).count()
+
+    invalid_entries = ExtractedData.objects.filter(
+        uploaded_file=latest_file
+    ).filter(
+        Q(smtp_is_valid=False) | Q(imap_is_valid=False)
+    ).count()
+
+    if total_rows_processed == 0:
+        processing_status = "❌ Not Started"
+    elif valid_entries + invalid_entries == total_rows_processed:
+        processing_status = "✅ Completed"
+    else:
+        processing_status = "⏳ Processing"
+
+    summary = {
+        "Start Time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "End Time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "Processing Duration": str(processing_duration),
+        "Total Rows Processed": total_rows_processed,
+        "Valid Entries": valid_entries,
+        "Invalid Entries": invalid_entries,
+        "Processing Status": processing_status
+    }
+
+    return JsonResponse(summary)

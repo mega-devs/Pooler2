@@ -1,14 +1,15 @@
 import os
 import zipfile
 import re
-import logging
 import chardet
 import mimetypes
+
+from root.logger import getLogger
 
 from .models import ExtractedData
 
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def extract_country_from_filename(filename):
@@ -47,7 +48,7 @@ def remove_duplicate_lines(file_path):
         # Возвращаем количество удалённых строк
         return len(lines) - len(unique_lines)
     except Exception as e:
-        logging.error(f"Error removing duplicate lines: {e}")
+        logger.error(f"Error removing duplicate lines: {e}")
         raise
 
 

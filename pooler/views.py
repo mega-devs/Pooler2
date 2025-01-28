@@ -35,7 +35,9 @@ from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_sel
 from files.models import ExtractedData
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
-logger = logging.getLogger(__name__)
+from root.logger import getLogger
+
+logger = getLogger(__name__)
 
 
 class RunTestViewSet(ViewSet):
@@ -751,6 +753,11 @@ def dynamic_settings(request):
 
             # to persist across multiple workers
             cache.set('LOGGING_ENABLED', is_enabled, timeout=None)
+            logger = logging.getLogger()
+            if is_enabled:
+                logger.setLevel(logging.INFO)
+            else:
+                logger.setLevel(logging.CRITICAL + 1)
 
         PoolerConfig.set_setting(key, value)
         return JsonResponse({'message': f'Setting {key} updated successfully'})

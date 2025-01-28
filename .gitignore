@@ -104,6 +104,10 @@ celerybeat-schedule
 
 backup
 
+<<<<<<< HEAD
 root/uploads
 
 results
+=======
+root/uploads/
+>>>>>>> 815a80671c8616cf2dd4c540d51506ec543dcdde
