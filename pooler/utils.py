@@ -208,7 +208,6 @@ def imapCheck(email, password, imapServerName):
         logger.debug(e)
         return False
 
-
 async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
     """
     Validates email addresses by checking SMTP and IMAP connectivity simultaneously.
@@ -231,6 +230,7 @@ async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
         print(f"Processing email: {email} with server: {server} port: {port}")
         smtp_status = None
         imap_status = None
+        provider_type = 'NONE'  # Default provider type
 
         try:
             match = re.match(r'^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})', email)
@@ -261,6 +261,11 @@ async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
                             if code == 250:
                                 smtp_status = True
                                 print("SMTP validation successful")
+                                # Determine provider type based on server
+                                if 'gmail' in server or 'yahoo' in server or 'outlook' in server:
+                                    provider_type = 'BIG'
+                                else:
+                                    provider_type = 'PRIVATE'
                             else:
                                 smtp_status = False
                             
@@ -288,7 +293,8 @@ async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
                     'smtp_is_valid': smtp_status,
                     'imap_is_valid': imap_status,
                     'uploaded_file': uploaded_file,
-                    'line_number': line_number
+                    'line_number': line_number,
+                    'provider_type': provider_type
                 }
             )
 
@@ -297,7 +303,8 @@ async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
                 'password': password, 
                 'status': smtp_status,
                 'imap_status': imap_status,
-                'line_number': line_number
+                'line_number': line_number,
+                'provider_type': provider_type
             }
             results.append(result)
 
@@ -307,6 +314,7 @@ async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
                 'smtp_valid': smtp_status, 
                 'imap_valid': imap_status,
                 'line_number': line_number,
+                'provider_type': provider_type,
                 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             })
 
@@ -459,7 +467,7 @@ async def check_smtp_imap_emails_from_zip(filename):
                 if not zip_info.is_dir():
                     with io.TextIOWrapper(zip_file.open(zip_info), encoding='utf-8') as f:
                         lines = f.readlines()
-                        chunk_size = 100
+                        chunk_size = 10
                         chunked_lines = list(chunks(lines, chunk_size))
                         tasks = []
                         for i, chunk in enumerate(chunked_lines):
@@ -469,7 +477,7 @@ async def check_smtp_imap_emails_from_zip(filename):
     else:
         async with aiofiles.open(file_path, 'r') as f:
             lines = await f.readlines()
-            chunk_size = 100
+            chunk_size = 10
             chunked_lines = list(chunks(lines, chunk_size))
             tasks = []
             for i, chunk in enumerate(chunked_lines):

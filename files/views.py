@@ -1208,13 +1208,13 @@ def error_summary(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
         
     missing_email_count = ExtractedData.objects.filter(email='').count()
-    missing_email_examples = ExtractedData.objects.filter(email='').values('line_number', 'email')[:5]
+    missing_email_examples = ExtractedData.objects.filter(email='').values('line_number', 'email')[:10]
 
     invalid_email_count = ExtractedData.objects.filter(email__regex=r'^[^@]+@[^@]+\.[^@]+$').count()
-    invalid_email_examples = ExtractedData.objects.filter(email__regex=r'^[^@]+@[^@]+\.[^@]+$').values('line_number', 'email')[:5]
+    invalid_email_examples = ExtractedData.objects.filter(email__regex=r'^[^@]+@[^@]+\.[^@]+$').values('line_number', 'email')[:10]
 
     duplicate_email_count = ExtractedData.objects.values('email').annotate(email_count=Count('email')).filter(email_count__gt=1).count()
-    duplicate_email_examples = ExtractedData.objects.values('email').annotate(email_count=Count('email')).filter(email_count__gt=1).values('email', 'line_number', 'email_count')[:5]
+    duplicate_email_examples = ExtractedData.objects.values('email').annotate(email_count=Count('email')).filter(email_count__gt=1).values('email', 'line_number', 'email_count')[:10]
 
     error_summary = {
         "Missing Email Address": {

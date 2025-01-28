@@ -74,9 +74,16 @@ class ExtractedData(models.Model):
         ('UNKNOWN', 'Unknown'),
     ]
 
+    PROVIDER_TYPES = [
+        ('BIG', 'Big Provider'),
+        ('PRIVATE', 'Private Server'),
+        ('NONE', 'None'),
+    ]
+
     email = models.CharField(max_length=255)
     password = models.CharField(max_length=255)
     provider = models.CharField(max_length=100)
+    provider_type = models.CharField(max_length=100, choices=PROVIDER_TYPES, default='NONE')
     country = models.CharField(max_length=100, null=True, blank=True)
     filename = models.CharField(max_length=255, null=True, blank=True)
     line_number = models.PositiveIntegerField(null=True, blank=True)
@@ -95,7 +102,6 @@ class ExtractedData(models.Model):
     class Meta:
         verbose_name = "Extracted Data"
         verbose_name_plural = "Extracted Data"
-
 
 class URLFetcher(models.Model):
     link = models.CharField(max_length=255)

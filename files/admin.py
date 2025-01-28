@@ -19,7 +19,7 @@ class UploadedFileAdmin(ImportExportModelAdmin):
 class ExtractedDataAdmin(ImportExportModelAdmin):
     resource_class = ExtractedDataResource
 
-    list_display = ('filename', 'email', 'provider', 'country', 'uploaded_file', 'smtp_is_valid', 'imap_is_valid')
+    list_display = ('line_number', 'email', 'provider', 'provider_type', 'country', 'uploaded_file', 'smtp_is_valid', 'imap_is_valid')
     list_filter = ('provider', 'country', 'smtp_is_valid', 'imap_is_valid')
     search_fields = ('email', 'provider', 'filename', 'uploaded_file__filename')
     ordering = ('-uploaded_file__upload_date',)
