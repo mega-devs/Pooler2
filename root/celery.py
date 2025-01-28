@@ -17,12 +17,12 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
-# Обновление конфигурации брокера
+# broker configuration
 app.conf.broker_transport_options = {
-    "visibility_timeout": 3600,  # Тайм-аут задач
-    "socket_timeout": 30,  # Тайм-аут подключения
-    "retry_on_timeout": True,  # Переподключение при ошибках
-    "health_check_interval": 25,  # Интервал проверки состояния брокера
+    "visibility_timeout": 3600,  # task timeout
+    "socket_timeout": 30,  # connection timeout
+    "retry_on_timeout": True,  # reconnect on errors
+    "health_check_interval": 25,  # health check interval
 }
 
 app.conf.beat_schedule = {

@@ -571,3 +571,30 @@ def clear_logs(path):
         return Response({"message": "Log cleared successfully"}, status=200)
     else:
         return Response({"message": "Log file not found"}, status=404)
+
+
+from celery import shared_task
+
+@shared_task(name='process_smtp_imap_check', queue='smtp_imap_queue')
+def process_smtp_imap_background(file_path):
+    """
+    Celery task for SMTP/IMAP checking
+    """
+    print(f"Processing file: {file_path}")
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    print(f"Processing file: {file_path} 2")
+
+    results = loop.run_until_complete(check_smtp_imap_emails_from_zip(file_path))
+
+    print(f"Results: {results}")
+    
+    return {
+        'status': 'completed',
+        'file': file_path,
+        'results': results
+    }

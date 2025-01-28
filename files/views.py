@@ -3,6 +3,7 @@ import os
 import mimetypes
 import re
 from random import sample
+import threading
 
 from django.db.models import Sum, Count
 from django.conf import settings
@@ -17,7 +18,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse
 from drf_yasg import openapi
-from pooler.utils import check_smtp_imap_emails_from_zip
+from pooler.utils import check_smtp_imap_emails_from_zip, process_smtp_imap_background
 from rest_framework.viewsets import ModelViewSet
 
 from rest_framework.decorators import api_view
@@ -1077,22 +1078,24 @@ def uploaded_files_data(request):
 @require_POST
 def process_uploaded_file(request, pk):
     """
-    Starts asynchronous processing of an uploaded file.
+    Return an immediate 200 response, then run extra logic in a background thread.
     """
-    try:        
-        file_obj = get_object_or_404(UploadedFile, pk=pk)
-        print(f"Processing file with id {pk}")
-        file_path = file_obj.file_path
+    file_obj = get_object_or_404(UploadedFile, pk=pk)
+    file_path = file_obj.file_path
+    
+    response = JsonResponse({
+        'message': f"File '{file_obj.filename}' found. Background process starting..."
+    }, status=200)
+    
+    def run_after_response():
+        print(f"Background thread started for file with id {pk} at path {file_path}")        
+        results = process_smtp_imap_background(file_path)
+        print(f"Completed background process for file: {file_path}")
 
-        asyncio.run(check_smtp_imap_emails_from_zip(file_path))
+    thread = threading.Thread(target=run_after_response, daemon=True)
+    thread.start()
 
-        return JsonResponse({
-            'message': f"File '{file_obj.filename}' processing started."
-        }, status=200)
-    except Exception as e:
-        logger.error(f"Error processing file with id {pk}: {e}")
-        return JsonResponse({'error': str(e)}, status=500)
-
+    return response
 
 
 class URLFetcherAPIView(ModelViewSet):
