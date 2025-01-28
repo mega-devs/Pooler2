@@ -216,11 +216,11 @@ async def process_chunk_from_file(chunk, results, uploaded_file):
     """
     for cred in chunk:
         print(f"Processing credential: {cred}")
-        if "|" not in cred:
+        if "|" not in cred and ":" not in cred:
             print(f"Skipping invalid format - no separator: {cred}")
             continue
             
-        parts = cred.strip().split("|")
+        parts = cred.strip().split("|") if "|" in cred else cred.strip().split(":")
         if len(parts) != 4:
             print(f"Skipping invalid parts count: {len(parts)}")
             continue

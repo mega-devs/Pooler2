@@ -1089,7 +1089,7 @@ def process_uploaded_file(request, pk):
     
     def run_after_response():
         print(f"Background thread started for file with id {pk} at path {file_path}")        
-        results = process_smtp_imap_background(file_path)
+        process_smtp_imap_background(file_path)
         print(f"Completed background process for file: {file_path}")
 
     thread = threading.Thread(target=run_after_response, daemon=True)
