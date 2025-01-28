@@ -20,7 +20,42 @@ class UploadedFile(models.Model):
     duplicate_count = models.PositiveIntegerField(default=0)
     origin = models.CharField(max_length=50, choices=MANAGEMENT_ORIGINS, default='MANUAL')
     is_checked = models.BooleanField(default=False)
+    file_size = models.CharField(max_length=50, null=True, blank=True)
+    file_type = models.CharField(max_length=50, null=True, blank=True)
+    total_rows_in_file = models.PositiveIntegerField(default=0, null=True, blank=True)
+    processing_start_time = models.DateTimeField(null=True, blank=True)
+    processing_end_time = models.DateTimeField(null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_files')
+
+    def save(self, *args, **kwargs):
+        if self.file_path:
+            import os
+            import mimetypes
+            import pandas as pd
+
+            file_size_bytes = os.path.getsize(self.file_path)
+            if file_size_bytes < 1024:
+                self.file_size = f"{file_size_bytes} B"
+            elif file_size_bytes < 1024 * 1024:
+                self.file_size = f"{file_size_bytes/1024:.2f} KB"
+            else:
+                self.file_size = f"{file_size_bytes/(1024*1024):.2f} MB"
+
+            self.file_type = mimetypes.guess_type(self.file_path)[0] or 'unknown'
+
+            # total rows for csv/excel/txt files
+            if self.file_type in ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/plain']:
+                try:
+                    if self.file_type == 'text/csv':
+                        df = pd.read_csv(self.file_path)
+                    elif self.file_type == 'text/plain':
+                        df = pd.read_csv(self.file_path)
+                    else:
+                        df = pd.read_excel(self.file_path)
+                    self.total_rows_in_file = len(df)
+                except Exception:
+                    self.total_rows_in_file = 0
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.filename} ({self.origin}) - {self.upload_date}"
@@ -29,7 +64,6 @@ class UploadedFile(models.Model):
         verbose_name = "Uploaded File"
         verbose_name_plural = "Uploaded Files"
         ordering = ["-upload_date"]
-
 
 class ExtractedData(models.Model):
     ORIGINS = [

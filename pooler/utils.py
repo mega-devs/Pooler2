@@ -9,6 +9,7 @@ import smtplib
 import zipfile
 from asyncio import gather
 from datetime import datetime
+from django.utils import timezone 
 
 import dns.resolver
 from rest_framework.response import Response
@@ -578,21 +579,27 @@ from celery import shared_task
 @shared_task(name='process_smtp_imap_check', queue='smtp_imap_queue')
 def process_smtp_imap_background(file_path):
     """
-    Celery task for SMTP/IMAP checking
+    Celery task for SMTP/IMAP checking with explicit timing
     """
-    print(f"Processing file: {file_path}")
+    # Find the uploaded file
+    uploaded_file = UploadedFile.objects.get(file_path=file_path)
+    
+    # Mark processing start time
+    uploaded_file.processing_start_time = timezone.now()
+    uploaded_file.save()
+
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    
-    print(f"Processing file: {file_path} 2")
 
     results = loop.run_until_complete(check_smtp_imap_emails_from_zip(file_path))
 
-    print(f"Results: {results}")
-    
+    # Mark processing end time
+    uploaded_file.processing_end_time = timezone.now()
+    uploaded_file.save()
+
     return {
         'status': 'completed',
         'file': file_path,
