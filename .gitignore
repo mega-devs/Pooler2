@@ -9,6 +9,8 @@ env/
 ENV/
 .venv/
 .pyenv/
+
+# Distribution / packaging
 *.egg
 *.egg-info/
 dist/
@@ -19,13 +21,14 @@ lib64/
 parts/
 sdist/
 var/
+
+# Python cache
 *.pyc
 *.pyo
 
 # Flask specific
 *.log
 *.pot
-*.pyc
 
 # Environment variables
 *.env
@@ -97,14 +100,8 @@ db.yml
 
 # Add any other files or directories you want to ignore
 session_name.session
-
 .vercel
-
 celerybeat-schedule
-
 backup
-
 root/uploads/
-
-
 */migrations/
