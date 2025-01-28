@@ -69,6 +69,7 @@ urlpatterns = [
    path('django-rq/', include('django_rq.urls')),
    path('backup/set/', set_backup_delay),
    path('backup/get/', get_backup_delay),
+   path('imap/', include('imap.urls')),
 ] + router.urls + static(main_settings.MEDIA_URL, document_root=main_settings.MEDIA_ROOT)
 
 if settings.DEBUG:

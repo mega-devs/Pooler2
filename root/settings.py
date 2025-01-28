@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'users.apps.UsersConfig',
     'files.apps.FilesConfig',
     'proxy.apps.ProxyConfig',
+    'imap',
     'telegram.apps.TelegramConfig',
     'ufw_manager.apps.UfwManagerConfig',    
     'rest_framework',
