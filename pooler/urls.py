@@ -22,6 +22,10 @@ urlpatterns = [
     path('checking_smtp/', views.check_smtp_view, name='checking_smtp'),
     path('checking_imap/', views.check_imap_view, name='checking_imap'),
     path('setting/', views.dynamic_settings, name='dynamic_settings'),
+    path('visitors/', views.get_visitors, name='visitors_list'),
+    path('pageviews/', views.get_pageviews, name='pageviews_list'),
+    path('visitors/statistics/', views.get_visitor_statistics, name='visitor_statistics'),
+    path('visitors/<str:visitor_id>/', views.get_visitor_details, name='visitor_detail'),
 ]
 
 if settings.DEBUG:

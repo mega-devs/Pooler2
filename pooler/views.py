@@ -2,37 +2,38 @@ import asyncio
 import base64
 import logging
 import os
-from pathlib import Path
 import zipfile
+from datetime import timedelta
+from pathlib import Path
+
 import aiofiles
 import requests
-
+from celery.result import AsyncResult
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import Count, Avg
+from django.db.models.functions import TruncDate, TruncHour
 from django.http import JsonResponse
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-
-from celery.result import AsyncResult
-
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.viewsets import ViewSet
-from rest_framework.decorators import action
 
 import adrf.decorators as adrf
+from files.models import ExtractedData
+from tracking.models import Pageview, Visitor
 
 from .apps import PoolerConfig
-
-from .utils import extract_country_from_filename, read_logs, clear_logs
 from .tasks import check_imap_emails_from_db, check_smtp_emails_from_db, run_selected_tests
-from files.models import ExtractedData
+from .utils import extract_country_from_filename, read_logs, clear_logs
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 from root.logger import getLogger
@@ -825,3 +826,261 @@ def dynamic_settings(request):
 #             await asyncio.gather(*tasks)
 #
 #     return imap_results
+
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'visitors': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'session_key': openapi.Schema(type=openapi.TYPE_STRING),
+                                'ip_address': openapi.Schema(type=openapi.TYPE_STRING),
+                                'user_agent': openapi.Schema(type=openapi.TYPE_STRING),
+                                'start_time': openapi.Schema(type=openapi.TYPE_STRING),
+                                'end_time': openapi.Schema(type=openapi.TYPE_STRING),
+                                'time_on_site': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                'geoip_data': openapi.Schema(type=openapi.TYPE_OBJECT)
+                            }
+                        )
+                    )
+                }
+            )
+        )
+    }
+)
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def get_visitors(request):
+    """
+    Returns list of visitors with their session and geo data.
+    Requires authentication.
+    """
+    visitors = Visitor.objects.all().select_related('user')
+    
+    visitor_data = []
+    for visitor in visitors:
+        data = {
+            'session_key': visitor.session_key,
+            'ip_address': visitor.ip_address,
+            'user_agent': visitor.user_agent,
+            'start_time': visitor.start_time,
+            'end_time': visitor.end_time,
+            'time_on_site': visitor.time_on_site,
+            'geoip_data': visitor.geoip_data
+        }
+        if visitor.user:
+            data['user'] = visitor.user.username
+        visitor_data.append(data)
+        
+    return JsonResponse({'visitors': visitor_data})
+
+
+@swagger_auto_schema(
+    method='get', 
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'pageviews': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'url': openapi.Schema(type=openapi.TYPE_STRING),
+                                'referer': openapi.Schema(type=openapi.TYPE_STRING),
+                                'query_string': openapi.Schema(type=openapi.TYPE_STRING),
+                                'method': openapi.Schema(type=openapi.TYPE_STRING),
+                                'view_time': openapi.Schema(type=openapi.TYPE_STRING),
+                                'visitor_ip': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    )
+                }
+            )
+        )
+    }
+)
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def get_pageviews(request):
+    """
+    Returns list of pageviews with associated visitor data.
+    Requires authentication.
+    """
+    pageviews = Pageview.objects.all().select_related('visitor')
+    
+    pageview_data = [{
+        'url': pv.url,
+        'referer': pv.referer,
+        'query_string': pv.query_string,
+        'method': pv.method,
+        'view_time': pv.view_time,
+        'visitor_ip': pv.visitor.ip_address
+    } for pv in pageviews]
+    
+    return JsonResponse({'pageviews': pageview_data})
+
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter(
+            'visitor_id',
+            openapi.IN_PATH,
+            description="Visitor's session key",
+            type=openapi.TYPE_STRING,
+            required=True
+        )
+    ],
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'visitor': openapi.Schema(type=openapi.TYPE_OBJECT),
+                    'pageviews': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'url': openapi.Schema(type=openapi.TYPE_STRING),
+                                'referer': openapi.Schema(type=openapi.TYPE_STRING),
+                                'query_string': openapi.Schema(type=openapi.TYPE_STRING),
+                                'method': openapi.Schema(type=openapi.TYPE_STRING),
+                                'view_time': openapi.Schema(type=openapi.TYPE_STRING)
+                            }
+                        )
+                    )
+                }
+            )
+        ),
+        404: 'Visitor not found'
+    }
+)
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def get_visitor_details(request, visitor_id):
+    """
+    Returns detailed information about a specific visitor including their pageviews.
+    Requires authentication.
+    """
+    try:
+        visitor = Visitor.objects.get(session_key=visitor_id)
+        pageviews = visitor.pageviews.all()
+        
+        visitor_data = {
+            'session_key': visitor.session_key,
+            'ip_address': visitor.ip_address,
+            'user_agent': visitor.user_agent,
+            'start_time': visitor.start_time,
+            'end_time': visitor.end_time,
+            'time_on_site': visitor.time_on_site,
+            'geoip_data': visitor.geoip_data
+        }
+        
+        pageview_data = [{
+            'url': pv.url,
+            'referer': pv.referer,
+            'query_string': pv.query_string,
+            'method': pv.method,
+            'view_time': pv.view_time
+        } for pv in pageviews]
+        
+        return JsonResponse({
+            'visitor': visitor_data,
+            'pageviews': pageview_data
+        })
+        
+    except Visitor.DoesNotExist:
+        return JsonResponse({'error': 'Visitor not found'}, status=404)
+
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            'Success',
+            openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'daily_visitors': openapi.Schema(type=openapi.TYPE_OBJECT),
+                    'total_visitors': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'active_visitors': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'total_pageviews': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'avg_time_on_site': openapi.Schema(type=openapi.TYPE_NUMBER),
+                    'top_pages': openapi.Schema(type=openapi.TYPE_OBJECT),
+                    'visitor_locations': openapi.Schema(type=openapi.TYPE_OBJECT)
+                }
+            )
+        )
+    }
+)
+@api_view(['GET'])
+def get_visitor_statistics(request):
+    """
+    Visitor statistics:
+    - Daily visitor counts
+    - Total unique visitors
+    - Currently active visitors
+    - Total pageviews
+    - Average time on site
+    - Most visited pages
+    - Visitor geographical distribution
+    """
+
+    end_date = timezone.now()
+    start_date = end_date - timedelta(days=30)
+    
+    daily_visitors = Visitor.objects.filter(
+        start_time__gte=start_date
+    ).annotate(
+        date=TruncDate('start_time')
+    ).values('date').annotate(
+        count=Count('session_key')
+    ).order_by('date')
+
+    total_visitors = Visitor.objects.count()
+    
+    active_cutoff = timezone.now() - timedelta(minutes=15)
+    active_visitors = Visitor.objects.filter(
+        end_time__gte=active_cutoff
+    ).count()
+    
+    total_pageviews = Pageview.objects.count()
+    
+    avg_time = Visitor.objects.filter(
+        time_on_site__isnull=False
+    ).aggregate(
+        avg_time=Avg('time_on_site')
+    )['avg_time'] or 0
+    
+    top_pages = Pageview.objects.values('url').annotate(
+        views=Count('url')
+    ).order_by('-views')[:10]
+    
+    visitor_locations = Visitor.objects.exclude(
+        ip_address__isnull=True
+    ).values('ip_address').annotate(
+        count=Count('session_key')
+    ).order_by('-count')
+    
+    return JsonResponse({
+        'daily_visitors': list(daily_visitors),
+        'total_visitors': total_visitors,
+        'active_visitors': active_visitors,
+        'total_pageviews': total_pageviews,
+        'avg_time_on_site': avg_time,
+        'top_pages': list(top_pages),
+        'visitor_locations': list(visitor_locations)
+    })
