@@ -44,19 +44,22 @@ class RunTestViewSet(ViewSet):
     queryset = None
     @action(detail=False, methods=['get'], url_path='', url_name='list')
     def lists(self, request):
+        logger.info("Retrieving test files list")
         test_files = {}
-        base_dir = Path(settings.BASE_DIR.parent)  # Adjust as needed
+        base_dir = Path(settings.BASE_DIR.parent)
         files = [file for file in base_dir.rglob("tests.py") if file.is_file()]
         for file in files:
-            app_name = file.parent.name  # Get the app folder name
-            test_files[app_name] = str(file.relative_to(base_dir))  # Store relative paths
-
+            app_name = file.parent.name
+            test_files[app_name] = str(file.relative_to(base_dir))
+        logger.debug(f"Found {len(test_files)} test files")
         return Response({"result": test_files})
 
     @action(detail=False, methods=['post'], url_path='run', url_name='run')
     def run(self, request):
+        logger.info("Running selected tests")
         test_list = request.data.get("tests", [])
         if not isinstance(test_list, list):
+            logger.error("Invalid test_list format - must be a list")
             return Response({"error": "test_list must be a list"}, status=400)
 
         base_dir = Path(settings.BASE_DIR.parent)
@@ -65,24 +68,31 @@ class RunTestViewSet(ViewSet):
         ]
         
         if invalid_tests:
+            logger.error(f"Invalid test files found: {invalid_tests}")
             return Response(
                 {"error": "The following test files do not exist", "invalid": invalid_tests},
                 status=400,
             )
 
+        logger.info(f"Starting test execution for {len(test_list)} tests")
         task = run_selected_tests.delay(test_list)
         return Response({"task_id": task.id}, status=202)
 
     @action(detail=True, methods=['get'], url_path='results', url_name='results')
     def results(self, request, pk=None):
-        task = AsyncResult(pk)  # `pk` is the dynamic `task_id`
+        logger.info(f"Checking results for task {pk}")
+        task = AsyncResult(pk)
         if task.state == "PENDING":
+            logger.debug(f"Task {pk} is still pending")
             return Response({"status": "PENDING", "result": task.result})
         elif task.state == "SUCCESS":
+            logger.info(f"Task {pk} completed successfully")
             return Response({"status": "SUCCESS", "result": task.result})
         elif task.state == "FAILURE":
+            logger.error(f"Task {pk} failed: {task.result}")
             return Response({"status": "FAILURE", "error": str(task.result)})
         else:
+            logger.debug(f"Task {pk} status: {task.state}")
             return Response({"status": task.state})
 
 @swagger_auto_schema(
@@ -219,14 +229,17 @@ def upload_file_by_url(request):
     if request.method == 'POST':
         try:
             file_url = request.data.get('url')
+            logger.info(f"Attempting to upload file from URL: {file_url}")
 
             if not file_url:
+                logger.error("No URL provided for file upload")
                 return Response({'status': 404, 'error': 'No URL provided'}, status=status.HTTP_400_BAD_REQUEST)
 
             response = requests.get(file_url)
             if response.status_code == 200:
                 filename = os.path.basename(file_url).replace(" ", "_")
                 country = extract_country_from_filename(filename)
+                logger.info(f"File download successful. Filename: {filename}, Country: {country}")
 
                 if country:
                     save_path = os.path.join('app', 'data', 'combofiles', country)
@@ -234,18 +247,21 @@ def upload_file_by_url(request):
                     save_path = os.path.join('app', 'data', 'combofiles')
 
                 os.makedirs(save_path, exist_ok=True)
-
                 filepath = os.path.join(save_path, filename)
+                
                 with open(filepath, 'wb') as file:
                     file.write(response.content)
+                logger.info(f"File saved successfully at: {filepath}")
 
                 return Response({'status': 200, 'filename': filename}, status=status.HTTP_200_OK)
-
             else:
+                logger.error(f"Failed to download file. Status code: {response.status_code}")
                 return Response({'status': 404, 'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
+            logger.exception(f"Error during file upload: {str(e)}")
             return Response({'status': 500, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
+        logger.warning("Invalid HTTP method for file upload")
         return Response({'status': 405, 'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
 
@@ -281,10 +297,13 @@ def check_smtp_view(request):
     Creates an event loop and runs the check_smtp_emails_from_db task.
     Returns JSON response with status on success or error response on failure.
     """
+    logger.info("Starting SMTP check")
     try:
         asyncio.run(check_smtp_emails_from_db())
+        logger.info("SMTP check completed successfully")
         return JsonResponse({'status': 'success'}, status=200)
     except Exception as e:
+        logger.exception(f"Error during SMTP check: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -578,7 +597,7 @@ async def clear_temp_logs(request):
     
     Creates empty log files if they don't exist.
     Returns a JSON response indicating success or failure."""
-
+    logger.info("Attempting to clear temporary logs")
     smtp_log_path = os.path.join("app", "data", "temp_logs", 'temp_smtp.log')
     imap_log_path = os.path.join("app", "data", "temp_logs", 'temp_imap.log')
 
@@ -586,11 +605,15 @@ async def clear_temp_logs(request):
         if os.path.exists(smtp_log_path):
             async with aiofiles.open(smtp_log_path, 'w') as smtp_file:
                 await smtp_file.write('')
+                logger.debug("SMTP temp log cleared")
         if os.path.exists(imap_log_path):
             async with aiofiles.open(imap_log_path, 'w') as imap_file:
                 await imap_file.write('')
+                logger.debug("IMAP temp log cleared")
+        logger.info("All temporary logs cleared successfully")
         return JsonResponse({"message": "Logs cleared successfully"}, status=200)
     except Exception as e:
+        logger.exception(f"Error clearing temporary logs: {str(e)}")
         return JsonResponse({"message": str(e)}, status=500)  
      
 
