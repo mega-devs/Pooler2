@@ -25,7 +25,7 @@ urlpatterns = [
     path('users/', views.get_users, name='users_list'),
     path('pageviews/', views.get_pageviews, name='pageviews_list'),
     path('users/statistics/', views.get_user_statistics, name='users_statistics'),
-    path('users/<str:visitor_id>/', views.get_user_details, name='users_detail'),
+    path('users/<str:user_id>/', views.get_user_details, name='users_detail'),
 ]
 
 if settings.DEBUG:
