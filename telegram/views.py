@@ -91,11 +91,15 @@ async def telegram_add_channel(request):
 
     Takes a channel username/link in the request body and validates it.
     Returns processed messages and saves them to a JSON file."""
+    logger.info("Received request to add Telegram channel.")
+    
     if request.method == 'POST':
         data = json.loads(request.body)
         channel = data.get('channel')
+        logger.info(f"Processing channel: {channel}")
 
         if not channel or not is_valid_telegram_username(channel):
+            logger.error("Invalid Telegram link or username.")
             return Response(
                 {'status': 'error', 'message': 'Invalid Telegram link or username'}, 
                 status=status.HTTP_400_BAD_REQUEST
@@ -109,11 +113,13 @@ async def telegram_add_channel(request):
                 return messages
 
         new_messages = await main()
+        logger.info(f"Retrieved {len(new_messages)} messages from channel.")
 
         filename = os.path.join('app', 'data', f'parsed_messages_{sanitized_channel}.json')
         os.makedirs(os.path.dirname(filename), exist_ok=True)
 
         existing_messages = await read_existing_messages(filename)
+        logger.info(f"Read {len(existing_messages)} existing messages from file.")
 
         existing_texts = {msg['text'] for msg in existing_messages}
         unique_messages = [msg for msg in new_messages if isinstance(msg, dict) and 'text' in msg and msg['text'] not in existing_texts]
@@ -121,17 +127,20 @@ async def telegram_add_channel(request):
         if unique_messages:
             combined_messages = existing_messages + unique_messages
             await write_messages(filename, combined_messages)
+            logger.info(f"Saved {len(unique_messages)} new unique messages to file.")
             return Response({
                 'status': 'success',
                 'messages': unique_messages,
                 'file': filename
             }, status=status.HTTP_200_OK)
         else:
+            logger.info("No new unique messages to save.")
             return Response({
                 'status': 'success',
                 'message': 'No new unique messages to save.'
             }, status=status.HTTP_200_OK)
 
+    logger.error("Invalid HTTP method.")
     return Response({
         'status': 'error', 
         'message': 'Invalid HTTP method'
@@ -188,17 +197,20 @@ async def telegram_add_channel(request):
 )
 @api_view(['POST'])
 def download_files_from_tg(request):
+    logger.info("Received request to download files from Telegram.")
     links = request.data.get('links', [])
     date_str = request.data.get('date', None)
     max_size = request.data.get('max_size', None)
 
     if not isinstance(links, list):
+        logger.error('Invalid input. "links" must be a list.')
         return JsonResponse({'error': 'Invalid input. "links" must be a list.'}, status=400)
 
     if date_str:
         try:
             filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
+            logger.error('Invalid date format. Use YYYY-MM-DD.')
             return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
     else:
         filter_date = None
@@ -207,6 +219,7 @@ def download_files_from_tg(request):
         try:
             MAX_SIZE_BYTES = int(max_size) * 1024 * 1024
         except ValueError:
+            logger.error('Invalid max_size. Must be an integer.')
             return JsonResponse({'error': 'Invalid max_size. Must be an integer.'}, status=400)
     else:
         MAX_SIZE_BYTES = 300 * 1024 * 1024
@@ -236,7 +249,9 @@ def download_files_from_tg(request):
                                     continue
                                 files.append(file_path)
                     except Exception as e:
+                        logger.error(f"Failed to process link {link}. Error: {str(e)}")
                         return {'error': f"Failed to process link {link}. Error: {str(e)}"}
+                logger.info(f"Successfully downloaded files: {files}")
                 return {'files': files}
 
         return async_to_sync(download)()
@@ -244,8 +259,10 @@ def download_files_from_tg(request):
     result = sync_download()
 
     if 'error' in result:
+        logger.error(f"Error in downloading files: {result['error']}")
         return JsonResponse(result, status=500)
 
+    logger.info("Files downloaded successfully.")
     return JsonResponse(result)
 
 
@@ -299,6 +316,7 @@ def download_files_from_tg(request):
 @api_view(['GET'])
 @require_GET
 async def get_combofiles_from_tg(request):
+    logger.info("Received request to get_combofiles_from_tg")
     date_str = request.GET.get('date', None)
     max_size = request.GET.get('max_size', None)
 
@@ -306,6 +324,7 @@ async def get_combofiles_from_tg(request):
         try:
             filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
+            logger.error("Invalid date format: %s", date_str)
             return Response({
                 'status': 'error',
                 'message': 'Invalid date format. Use YYYY-MM-DD.'
@@ -318,6 +337,7 @@ async def get_combofiles_from_tg(request):
         with open(links_file_path, 'r') as file:
             links = [link.strip() for link in file.readlines()]
     except FileNotFoundError:
+        logger.error("Telegram links file not found at path: %s", links_file_path)
         return Response({
             'status': 'error',
             'message': 'Telegram links file not found'
@@ -330,6 +350,7 @@ async def get_combofiles_from_tg(request):
     })
 
     if not files:
+        logger.info("No files found for the given criteria")
         return Response({
             'status': 'error',
             'message': 'No files found'
@@ -341,6 +362,7 @@ async def get_combofiles_from_tg(request):
             zipf.write(file, os.path.basename(file))
 
     try:
+        logger.info("Sending zip file: %s", zip_filename)
         response = FileResponse(open(zip_filename, 'rb'), as_attachment=True)
         response['Content-Disposition'] = 'attachment; filename="tg.zip"'
         return response
@@ -348,6 +370,7 @@ async def get_combofiles_from_tg(request):
         os.remove(zip_filename)
         for file in files:
             os.remove(file)
+        logger.info("Cleaned up temporary files")
 
 
 @swagger_auto_schema(
@@ -400,6 +423,7 @@ async def get_combofiles_from_tg(request):
 @api_view(['GET'])
 @require_GET
 async def get_from_tg(request):
+    logger.info("Received request to get files from Telegram.")
     links_file_path = os.path.join(settings.BASE_DIR, "data", "tg.txt")
     date_str = request.GET.get('date', None)
     max_size = request.GET.get('max_size', None)
@@ -408,6 +432,7 @@ async def get_from_tg(request):
         try:
             filter_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
+            logger.error("Invalid date format provided.")
             return Response({
                 'status': 'error',
                 'message': 'Invalid date format. Use YYYY-MM-DD.'
@@ -419,6 +444,7 @@ async def get_from_tg(request):
         with open(links_file_path, 'r') as file:
             links = [link.strip() for link in file.readlines()]
     except FileNotFoundError:
+        logger.error("Telegram links file not found.")
         return Response({
             'status': 'error',
             'message': 'Telegram links file not found'
@@ -431,6 +457,7 @@ async def get_from_tg(request):
     })
 
     if not files:
+        logger.warning("No files found for the given criteria.")
         return Response({
             'status': 'error',
             'message': 'No files found'
@@ -442,10 +469,12 @@ async def get_from_tg(request):
             zipf.write(file, os.path.basename(file))
 
     try:
+        logger.info("Files zipped successfully, preparing response.")
         response = FileResponse(open(zip_filename, 'rb'), as_attachment=True)
         response['Content-Disposition'] = 'attachment; filename="tg.zip"'
         return response
     finally:
+        logger.info("Cleaning up temporary files.")
         os.remove(zip_filename)
         for file in files:
             os.remove(file)
@@ -453,6 +482,7 @@ async def get_from_tg(request):
 
 class LocalFileUploadView(APIView):
     def post(self, request):
+        logger.info("LocalFileUploadView POST request received.")
         serializer = LocalFileUploadSerializer(data=request.data)
         if serializer.is_valid():
             file = serializer.validated_data['file']
@@ -473,9 +503,11 @@ class LocalFileUploadView(APIView):
 
 class URLFileUploadView(APIView):
     def post(self, request):
+        logger.info("URLFileUploadView POST request received.")
         serializer = URLFileUploadSerializer(data=request.data)
         if serializer.is_valid():
             file_url = serializer.validated_data['file_url']
+            logger.info(f"Received file URL: {file_url}")
 
             try:
                 response = requests.get(file_url)
@@ -484,11 +516,15 @@ class URLFileUploadView(APIView):
                 file_path = os.path.join(settings.COMBO_FILES_DIR, file_name)
 
                 save_file(response.content, file_path)
+                logger.info(f"File {file_name} uploaded successfully from URL.")
                 return Response({'message': 'File uploaded successfully from URL'}, status=status.HTTP_201_CREATED)
 
             except requests.exceptions.RequestException as e:
+                logger.error(f"Failed to retrieve file from the URL: {e}")
                 return Response({'error': 'Failed to retrieve file from the URL'}, status=status.HTTP_400_BAD_REQUEST)
             except Exception as e:
+                logger.error(f"Failed to save the file: {e}")
                 return Response({f"error': 'Failed to save the file: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        logger.warning(f"Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -44,40 +44,39 @@ class RunTestViewSet(ViewSet):
     queryset = None
     @action(detail=False, methods=['get'], url_path='', url_name='list')
     def lists(self, request):
-        logger.info("Retrieving test files list")
+        logger.info("Starting test files listing")
         test_files = {}
         base_dir = Path(settings.BASE_DIR.parent)
         files = [file for file in base_dir.rglob("tests.py") if file.is_file()]
         for file in files:
             app_name = file.parent.name
             test_files[app_name] = str(file.relative_to(base_dir))
-        logger.debug(f"Found {len(test_files)} test files")
+        logger.info(f"Found {len(test_files)} test files")
+        logger.debug(f"Test files: {test_files}")
         return Response({"result": test_files})
 
     @action(detail=False, methods=['post'], url_path='run', url_name='run')
     def run(self, request):
-        logger.info("Running selected tests")
+        logger.info("Starting test execution request")
         test_list = request.data.get("tests", [])
+        logger.debug(f"Received test list: {test_list}")
+        
         if not isinstance(test_list, list):
-            logger.error("Invalid test_list format - must be a list")
+            logger.error("Invalid test_list format received")
             return Response({"error": "test_list must be a list"}, status=400)
 
         base_dir = Path(settings.BASE_DIR.parent)
-        invalid_tests = [
-            test for test in test_list if not (base_dir / test).exists()
-        ]
+        invalid_tests = [test for test in test_list if not (base_dir / test).exists()]
         
         if invalid_tests:
-            logger.error(f"Invalid test files found: {invalid_tests}")
-            return Response(
-                {"error": "The following test files do not exist", "invalid": invalid_tests},
-                status=400,
-            )
+            logger.warning(f"Invalid test files detected: {invalid_tests}")
+            return Response({"error": "Invalid test files", "invalid": invalid_tests}, status=400)
 
-        logger.info(f"Starting test execution for {len(test_list)} tests")
+        logger.info(f"Initiating test execution for {len(test_list)} tests")
         task = run_selected_tests.delay(test_list)
+        logger.debug(f"Created task with ID: {task.id}")
         return Response({"task_id": task.id}, status=202)
-
+    
     @action(detail=True, methods=['get'], url_path='results', url_name='results')
     def results(self, request, pk=None):
         logger.info(f"Checking results for task {pk}")
@@ -94,6 +93,7 @@ class RunTestViewSet(ViewSet):
         else:
             logger.debug(f"Task {pk} status: {task.state}")
             return Response({"status": task.state})
+
 
 @swagger_auto_schema(
     method='get',
@@ -213,6 +213,8 @@ def panel_settings(request):
     This view function handles both GET and POST requests and requires user authentication.    
     Returns JSON response with active page context set to 'settings'.
     """
+    logger.info(f"Panel settings accessed by user: {request.user}")
+    logger.debug(f"Request method: {request.method}")
     data = {'active_page': "settings"}
     return JsonResponse(data)
 
@@ -264,7 +266,6 @@ def upload_file_by_url(request):
         logger.warning("Invalid HTTP method for file upload")
         return Response({'status': 405, 'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
-
 @swagger_auto_schema(
     method='get',
     responses={
@@ -339,10 +340,13 @@ def check_imap_view(request):
     Creates an event loop and runs the check_imap_emails_from_db task.
     Returns JSON response with status on success or error response on failure.
     """
+    logger.info("Starting IMAP check")
     try:
         asyncio.run(check_imap_emails_from_db())
+        logger.info("IMAP check completed successfully")
         return JsonResponse({'status': 'success'}, status=200)
     except Exception as e:
+        logger.exception(f"Error during IMAP check: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -526,7 +530,6 @@ async def get_logs(request):
             return None
 
     try:
-        # Read and parse each log file
         smtp_logs = []
         imap_logs = []
         socks_logs = []
@@ -672,21 +675,28 @@ def clear_full_logs(request):
 
     try:
         if clear_smtp:
+            logger.debug("Clearing SMTP log")
             return clear_logs(smtp_log_path)
         if clear_imap:
+            logger.debug("Clearing IMAP log")
             return clear_logs(imap_log_path)
         if clear_socks:
+            logger.debug("Clearing SOCKS log")
             return clear_logs(socks_log_path)
         if clear_telegram:
+            logger.debug("Clearing Telegram log")
             return clear_logs(telegram_log_path)
         if clear_url:
+            logger.debug("Clearing URL log")
             return clear_logs(url_log_path)
 
+        logger.info("No logs specified for clearing")
         return Response({"message": "No logs specified for clearing"}, status=400)
 
     except Exception as e:
+        logger.exception(f"Error clearing logs: {str(e)}")
         return Response({"message": str(e)}, status=500)
-    
+
 
 @swagger_auto_schema(
     method='get',
@@ -745,6 +755,7 @@ def get_valid_smtp(request):
     valid_smtp = ExtractedData.objects.filter(smtp_is_valid=True).values(
         'email', 'password', 'provider', 'country', 'filename'
     )
+    logger.info("Fetched valid SMTP entries")
     return JsonResponse({'valid_smtp': list(valid_smtp)})
 
 
@@ -757,6 +768,7 @@ def get_valid_imap(request):
     valid_imap = ExtractedData.objects.filter(imap_is_valid=True).values(
         'email', 'password', 'provider', 'country', 'filename'
     )
+    logger.info("Fetched valid IMAP entries")
     return JsonResponse({'valid_imap': list(valid_imap)})
 
 

@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from rest_framework import status
@@ -13,6 +14,7 @@ from .utils import check_single_proxy
 
 from root.celery import app
 
+logger = logging.getLogger(__name__)
 
 class ProxyViewSet(ModelViewSet):
     queryset = Proxy.objects.all()
@@ -20,6 +22,7 @@ class ProxyViewSet(ModelViewSet):
     pagination_class = PageNumberPagination
 
     def retrieve(self, request, *args, **kwargs):
+        logger.info("Retrieving proxy")
         instance = self.get_object()
         proxy = check_single_proxy(instance)
         serializer = self.get_serializer(proxy)
@@ -27,6 +30,7 @@ class ProxyViewSet(ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_proxies(self, request):
+        logger.info("Uploading proxies")
         serializer = TextFileUploadSerializer(data=request.data)
         if serializer.is_valid():
             file = serializer.validated_data['file']
@@ -77,12 +81,14 @@ class ProxyViewSet(ModelViewSet):
                 return Response(response_data, status=status.HTTP_201_CREATED)
 
             except Exception as e:
+                logger.error(f"Error uploading proxies: {str(e)}")
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'], url_path='upload-list')
     def upload_list_proxies(self, request):
+        logger.info("Uploading list of proxies")
         proxies = request.data.get('proxies', [])
         existing_proxies = set(f"{proxy.host}:{proxy.port}" for proxy in Proxy.objects.all())
         created_proxies = []
@@ -119,21 +125,26 @@ class ProxyViewSet(ModelViewSet):
             return Response(response_data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            logger.error(f"Error uploading list of proxies: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
 def set_backup_delay(request):
+    logger.info("Setting backup delay")
     try:
         app.conf.beat_schedule['backup']['schedule'] = timedelta(hours=request.data.get('delay'))
         return Response({'status': 'success'}, status=status.HTTP_201_CREATED)
     except Exception as e:
+        logger.error(f"Error setting backup delay: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
 def get_backup_delay(request):
+    logger.info("Getting backup delay")
     try:
         return Response({'delay': app.conf.beat_schedule['backup']['schedule']}, status=status.HTTP_200_OK)
     except Exception as e:
+        logger.error(f"Error getting backup delay: {str(e)}")
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
