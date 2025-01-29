@@ -16,9 +16,8 @@ def comboloader(file_content, user_id):
     failed_combos = []
     total_combos = 0
 
-    lines = file_content.splitlines()
+    for line in file_content.splitlines():
 
-    for line in lines:
         new_combo = line.strip().replace(';', ':').replace(',', ':').replace('|', ':')
         parts = new_combo.split(':')
 
@@ -29,11 +28,7 @@ def comboloader(file_content, user_id):
 
         email, password = parts[0], parts[1]
 
-        if not email_verification(email):
-            failed_combos.append((email, password, 'fail'))
-            continue
-
-        if blacklist_check(email):
+        if not (email_verification(email) and not blacklist_check(email)):
             failed_combos.append((email, password, 'fail'))
             continue
 

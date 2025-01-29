@@ -25,6 +25,7 @@ def result(target_file, result_output):
     except:
         return False
 
+
 def email_verification(email):
     '''
     Checks whether a certain string represents an email.
@@ -38,6 +39,7 @@ def email_verification(email):
         return True
     else:
         return False
+
 
 def blacklist_check(email):
     '''
@@ -60,6 +62,7 @@ def blacklist_check(email):
     else:
         return False
 
+
 def domain_verification(domain):
     '''
     Checks whether a certain string represents a domain.
@@ -73,6 +76,7 @@ def domain_verification(domain):
         return True
     else:
         return False
+
 
 def clean():
     '''

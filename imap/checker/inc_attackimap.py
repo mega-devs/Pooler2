@@ -1,31 +1,9 @@
-#!/usr/local/opt/python@3.8/bin/python3
-# -*- coding: utf-8 -*-
-
-__author__ = 'DrPython3'
-__date__ = '2021-12-05'
-__version__ = 'BETA(1.1)'
-__contact__ = 'https://github.com/DrPython3'
-
-'''
----------------------------------------------
-Functions for Checking Mailpass Combos (IMAP)
----------------------------------------------
-
-Part of << Mail.Rip V3: https://github.com/DrPython3/MailRipV3 >>
-'''
-
-# [IMPORTS]
-# ---------
-
-import sys
 import ssl
 import socket
 import imaplib
 import json
 from .inc_etc import result
 
-# [VARIABLES AND OTHER STUFF]
-# ---------------------------
 
 try:
     # load IMAP lists and dictionary from JSON files:
@@ -44,8 +22,6 @@ except:
     imap_ports = []
     imap_services = {}
 
-# [FUNCTIONS]
-# -----------
 
 def imapchecker(default_timeout, target):
     '''
@@ -93,7 +69,7 @@ def imapchecker(default_timeout, target):
         except:
             pass
         # establish connection to host (details found in imap_services):
-        if service_found == True:
+        if service_found:
             try:
                 # SSL connection:
                 if int(target_port) == int(993):
@@ -122,7 +98,7 @@ def imapchecker(default_timeout, target):
             except:
                 pass
         # if no connection established, try with common values:
-        if connection_ok == False:
+        if not connection_ok:
             for subdomain in imap_domains:
                 test_host = str(str(subdomain) + str(target_email.split('@')[1]).lower())
                 for next_port in imap_ports:
@@ -165,7 +141,7 @@ def imapchecker(default_timeout, target):
                 else:
                     continue
         # test login credentials using established connection:
-        if connection_ok == True:
+        if connection_ok:
             try:
                 # MD5 authentification:
                 if 'AUTH=CRAM-MD5' in imap_connection.capabilities:
@@ -196,7 +172,7 @@ def imapchecker(default_timeout, target):
                     pass
             except:
                 pass
-            if md5_login == False:
+            if not md5_login:
             # reegular login, no CRAM-MD5:
                 # login with user = email:
                 try:
@@ -223,7 +199,6 @@ def imapchecker(default_timeout, target):
         # no connection established, write log for target:
         else:
             result(output_checked, str(f'{new_target};result=no connection'))
-        # TODO: probably change to select method ...
         # with valid login, try to list mailboxes:
         if login_valid == True:
             try:
@@ -236,7 +211,6 @@ def imapchecker(default_timeout, target):
             except:
                 pass
         try:
-            # TODO: in case of using select method above, send "close" first ...
             imap_connection.logout()
         except:
             pass
@@ -252,5 +226,3 @@ def imapchecker(default_timeout, target):
     except:
         result(output_checked, str(f'{new_target};result=check failed'))
         return False
-
-# DrPython3 (C) 2021 @ GitHub.com
