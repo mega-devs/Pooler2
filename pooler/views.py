@@ -836,7 +836,7 @@ def dynamic_settings(request):
             openapi.Schema(
                 type=openapi.TYPE_OBJECT,
                 properties={
-                    'visitors': openapi.Schema(
+                    'users': openapi.Schema(
                         type=openapi.TYPE_ARRAY,
                         items=openapi.Schema(
                             type=openapi.TYPE_OBJECT,
@@ -858,33 +858,33 @@ def dynamic_settings(request):
 )
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
-def get_visitors(request):
+def get_users(request):
     """
-    Returns list of visitors with their session and geo data.
+    Returns list of users with their session and geo data.
     Requires authentication.
     """
     logger = logging.getLogger(__name__)
-    logger.info('Fetching all visitors')
+    logger.info('Fetching all users')
     
-    visitors = Visitor.objects.all().select_related('user')
+    users = Visitor.objects.all().select_related('user')
     
-    visitor_data = []
-    for visitor in visitors:
+    user_data = []
+    for user in users:
         data = {
-            'session_key': visitor.session_key,
-            'ip_address': visitor.ip_address,
-            'user_agent': visitor.user_agent,
-            'start_time': visitor.start_time,
-            'end_time': visitor.end_time,
-            'time_on_site': visitor.time_on_site,
-            'geoip_data': visitor.geoip_data
+            'session_key': user.session_key,
+            'ip_address': user.ip_address,
+            'user_agent': user.user_agent,
+            'start_time': user.start_time,
+            'end_time': user.end_time,
+            'time_on_site': user.time_on_site,
+            'geoip_data': user.geoip_data
         }
-        if visitor.user:
-            data['user'] = visitor.user.username
-        visitor_data.append(data)
+        if user.user:
+            data['user'] = user.user.username
+        user_data.append(data)
     
-    logger.info(f'Retrieved {len(visitor_data)} visitors')
-    return JsonResponse({'visitors': visitor_data})
+    logger.info(f'Retrieved {len(user_data)} users')
+    return JsonResponse({'users': user_data})
 
 
 @swagger_auto_schema(
@@ -905,7 +905,7 @@ def get_visitors(request):
                                 'query_string': openapi.Schema(type=openapi.TYPE_STRING),
                                 'method': openapi.Schema(type=openapi.TYPE_STRING),
                                 'view_time': openapi.Schema(type=openapi.TYPE_STRING),
-                                'visitor_ip': openapi.Schema(type=openapi.TYPE_STRING)
+                                'user_ip': openapi.Schema(type=openapi.TYPE_STRING)
                             }
                         )
                     )
@@ -918,7 +918,7 @@ def get_visitors(request):
 # @permission_classes([IsAuthenticated])
 def get_pageviews(request):
     """
-    Returns list of pageviews with associated visitor data.
+    Returns list of pageviews with associated user data.
     Requires authentication.
     """
     logger = logging.getLogger(__name__)
@@ -932,7 +932,7 @@ def get_pageviews(request):
         'query_string': pv.query_string,
         'method': pv.method,
         'view_time': pv.view_time,
-        'visitor_ip': pv.visitor.ip_address
+        'user_ip': pv.visitor.ip_address
     } for pv in pageviews]
     
     logger.info(f'Retrieved {len(pageview_data)} pageviews')
@@ -943,9 +943,9 @@ def get_pageviews(request):
     method='get',
     manual_parameters=[
         openapi.Parameter(
-            'visitor_id',
+            'user_id',
             openapi.IN_PATH,
-            description="Visitor's session key",
+            description="User's session key",
             type=openapi.TYPE_STRING,
             required=True
         )
@@ -956,7 +956,7 @@ def get_pageviews(request):
             openapi.Schema(
                 type=openapi.TYPE_OBJECT,
                 properties={
-                    'visitor': openapi.Schema(type=openapi.TYPE_OBJECT),
+                    'user': openapi.Schema(type=openapi.TYPE_OBJECT),
                     'pageviews': openapi.Schema(
                         type=openapi.TYPE_ARRAY,
                         items=openapi.Schema(
@@ -973,31 +973,31 @@ def get_pageviews(request):
                 }
             )
         ),
-        404: 'Visitor not found'
+        404: 'User not found'
     }
 )
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
-def get_visitor_details(request, visitor_id):
+def get_user_details(request, user_id):
     """
-    Returns detailed information about a specific visitor including their pageviews.
+    Returns detailed information about a specific user including their pageviews.
     Requires authentication.
     """
     logger = logging.getLogger(__name__)
-    logger.info(f'Fetching details for visitor: {visitor_id}')
+    logger.info(f'Fetching details for user: {user_id}')
     
     try:
-        visitor = Visitor.objects.get(session_key=visitor_id)
-        pageviews = visitor.pageviews.all()
+        user = Visitor.objects.get(session_key=user_id)
+        pageviews = user.pageviews.all()
         
-        visitor_data = {
-            'session_key': visitor.session_key,
-            'ip_address': visitor.ip_address,
-            'user_agent': visitor.user_agent,
-            'start_time': visitor.start_time,
-            'end_time': visitor.end_time,
-            'time_on_site': visitor.time_on_site,
-            'geoip_data': visitor.geoip_data
+        user_data = {
+            'session_key': user.session_key,
+            'ip_address': user.ip_address,
+            'user_agent': user.user_agent,
+            'start_time': user.start_time,
+            'end_time': user.end_time,
+            'time_on_site': user.time_on_site,
+            'geoip_data': user.geoip_data
         }
         
         pageview_data = [{
@@ -1008,15 +1008,15 @@ def get_visitor_details(request, visitor_id):
             'view_time': pv.view_time
         } for pv in pageviews]
         
-        logger.info(f'Found visitor {visitor_id} with {len(pageview_data)} pageviews')
+        logger.info(f'Found user {user_id} with {len(pageview_data)} pageviews')
         return JsonResponse({
-            'visitor': visitor_data,
+            'user': user_data,
             'pageviews': pageview_data
         })
         
     except Visitor.DoesNotExist:
-        logger.warning(f'Visitor not found: {visitor_id}')
-        return JsonResponse({'error': 'Visitor not found'}, status=404)
+        logger.warning(f'User not found: {user_id}')
+        return JsonResponse({'error': 'User not found'}, status=404)
 
 
 @swagger_auto_schema(
@@ -1027,37 +1027,37 @@ def get_visitor_details(request, visitor_id):
             openapi.Schema(
                 type=openapi.TYPE_OBJECT,
                 properties={
-                    'daily_visitors': openapi.Schema(type=openapi.TYPE_OBJECT),
-                    'total_visitors': openapi.Schema(type=openapi.TYPE_INTEGER),
-                    'active_visitors': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'daily_users': openapi.Schema(type=openapi.TYPE_OBJECT),
+                    'total_users': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'active_users': openapi.Schema(type=openapi.TYPE_INTEGER),
                     'total_pageviews': openapi.Schema(type=openapi.TYPE_INTEGER),
                     'avg_time_on_site': openapi.Schema(type=openapi.TYPE_NUMBER),
                     'top_pages': openapi.Schema(type=openapi.TYPE_OBJECT),
-                    'visitor_locations': openapi.Schema(type=openapi.TYPE_OBJECT)
+                    'user_locations': openapi.Schema(type=openapi.TYPE_OBJECT)
                 }
             )
         )
     }
 )
 @api_view(['GET'])
-def get_visitor_statistics(request):
+def get_user_statistics(request):
     """
-    Visitor statistics:
-    - Daily visitor counts
-    - Total unique visitors
-    - Currently active visitors
+    User statistics:
+    - Daily User counts
+    - Total unique users
+    - Currently active users
     - Total pageviews
     - Average time on site
     - Most visited pages
-    - Visitor geographical distribution
+    - User geographical distribution
     """
     logger = logging.getLogger(__name__)
-    logger.info('Generating visitor statistics')
+    logger.info('Generating user statistics')
 
     end_date = timezone.now()
     start_date = end_date - timedelta(days=30)
     
-    daily_visitors = Visitor.objects.filter(
+    daily_users = Visitor.objects.filter(
         start_time__gte=start_date
     ).annotate(
         date=TruncDate('start_time')
@@ -1065,10 +1065,10 @@ def get_visitor_statistics(request):
         count=Count('session_key')
     ).order_by('date')
 
-    total_visitors = Visitor.objects.count()
+    total_users = Visitor.objects.count()
     
     active_cutoff = timezone.now() - timedelta(minutes=15)
-    active_visitors = Visitor.objects.filter(
+    active_users = Visitor.objects.filter(
         end_time__gte=active_cutoff
     ).count()
     
@@ -1084,19 +1084,19 @@ def get_visitor_statistics(request):
         views=Count('url')
     ).order_by('-views')[:10]
     
-    visitor_locations = Visitor.objects.exclude(
+    user_locations = Visitor.objects.exclude(
         ip_address__isnull=True
     ).values('ip_address').annotate(
         count=Count('session_key')
     ).order_by('-count')
     
-    logger.info(f'Statistics generated: {total_visitors} total visitors, {active_visitors} active visitors')
+    logger.info(f'Statistics generated: {total_users} total users, {active_users} active users')
     return JsonResponse({
-        'daily_visitors': list(daily_visitors),
-        'total_visitors': total_visitors,
-        'active_visitors': active_visitors,
+        'daily_users': list(daily_users),
+        'total_users': total_users,
+        'active_users': active_users,
         'total_pageviews': total_pageviews,
         'avg_time_on_site': avg_time,
         'top_pages': list(top_pages),
-        'visitor_locations': list(visitor_locations)
+        'user_locations': list(user_locations)
     })
