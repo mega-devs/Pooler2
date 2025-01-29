@@ -1,9 +1,10 @@
-import sys
+import logging
 import threading
 
-from .inc_attackimap import imapchecker
 from queue import Queue
 from time import sleep
+
+from .inc_attackimap import imapchecker
 from .inc_comboloader import comboloader
 
 from imap.models import Combo, IMAPCheckResult, Statistics
@@ -15,6 +16,8 @@ fails = int(0)
 
 checker_queue = Queue()
 
+logger = logging.getLogger(__name__)
+
 
 def checker_thread(default_timeout, user_id):
     '''
@@ -23,32 +26,34 @@ def checker_thread(default_timeout, user_id):
     :param float default_timeout: timeout for server connection
     :return: None
     '''
-    # set variables:
+
     global targets_left
     global hits
     global fails
-    # start thread for IMAP checker:
+
     while True:
         target = str(checker_queue.get())
         target_email, target_password = target.split(':')
-        combo = Combo.objects.filter(email=target_email, password=target_password, user_id=user_id)[0]
-        result = False
+
         try:
-            result = imapchecker(
-                float(default_timeout),
-                str(f'{target}')
-            )
-        except:
-            pass
-        # update stats:
-        if result:
-            IMAPCheckResult.objects.create(combo=combo, user_id=user_id, status='hit')
-            hits += 1
-        else:
-            IMAPCheckResult.objects.create(combo=combo, user_id=user_id, status='fail')
-            fails += 1
-        targets_left -= 1
-        checker_queue.task_done()
+            combo = Combo.objects.get(email=target_email, password=target_password, user_id=user_id)
+
+            result = imapchecker(default_timeout, target)
+
+            status = 'hit' if result else 'fail'
+            IMAPCheckResult.objects.create(combo=combo, user_id=user_id, status=status)
+
+            if result:
+                hits += 1
+            else:
+                fails += 1
+
+        except Exception as e:
+            logger.error(f"Error in checker_thread: {e}")
+
+        finally:
+            targets_left -= 1
+            checker_queue.task_done()
 
 
 def checker(default_threads, default_timeout, file_content, user_id):
@@ -65,8 +70,7 @@ def checker(default_threads, default_timeout, file_content, user_id):
 
     try:
         combos = comboloader(file_content, user_id)
-    except Exception as e:
-        print(f"Error loading combos: {e}")
+    except:
         combos = []
 
     targets_total = len(combos)

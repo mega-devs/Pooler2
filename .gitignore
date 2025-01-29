@@ -105,3 +105,5 @@ celerybeat-schedule
 backup
 root/uploads/
 */migrations/
+
+results
