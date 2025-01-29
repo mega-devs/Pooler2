@@ -863,6 +863,9 @@ def get_visitors(request):
     Returns list of visitors with their session and geo data.
     Requires authentication.
     """
+    logger = logging.getLogger(__name__)
+    logger.info('Fetching all visitors')
+    
     visitors = Visitor.objects.all().select_related('user')
     
     visitor_data = []
@@ -879,7 +882,8 @@ def get_visitors(request):
         if visitor.user:
             data['user'] = visitor.user.username
         visitor_data.append(data)
-        
+    
+    logger.info(f'Retrieved {len(visitor_data)} visitors')
     return JsonResponse({'visitors': visitor_data})
 
 
@@ -917,6 +921,9 @@ def get_pageviews(request):
     Returns list of pageviews with associated visitor data.
     Requires authentication.
     """
+    logger = logging.getLogger(__name__)
+    logger.info('Fetching all pageviews')
+    
     pageviews = Pageview.objects.all().select_related('visitor')
     
     pageview_data = [{
@@ -928,6 +935,7 @@ def get_pageviews(request):
         'visitor_ip': pv.visitor.ip_address
     } for pv in pageviews]
     
+    logger.info(f'Retrieved {len(pageview_data)} pageviews')
     return JsonResponse({'pageviews': pageview_data})
 
 
@@ -975,6 +983,9 @@ def get_visitor_details(request, visitor_id):
     Returns detailed information about a specific visitor including their pageviews.
     Requires authentication.
     """
+    logger = logging.getLogger(__name__)
+    logger.info(f'Fetching details for visitor: {visitor_id}')
+    
     try:
         visitor = Visitor.objects.get(session_key=visitor_id)
         pageviews = visitor.pageviews.all()
@@ -997,12 +1008,14 @@ def get_visitor_details(request, visitor_id):
             'view_time': pv.view_time
         } for pv in pageviews]
         
+        logger.info(f'Found visitor {visitor_id} with {len(pageview_data)} pageviews')
         return JsonResponse({
             'visitor': visitor_data,
             'pageviews': pageview_data
         })
         
     except Visitor.DoesNotExist:
+        logger.warning(f'Visitor not found: {visitor_id}')
         return JsonResponse({'error': 'Visitor not found'}, status=404)
 
 
@@ -1038,6 +1051,8 @@ def get_visitor_statistics(request):
     - Most visited pages
     - Visitor geographical distribution
     """
+    logger = logging.getLogger(__name__)
+    logger.info('Generating visitor statistics')
 
     end_date = timezone.now()
     start_date = end_date - timedelta(days=30)
@@ -1075,6 +1090,7 @@ def get_visitor_statistics(request):
         count=Count('session_key')
     ).order_by('-count')
     
+    logger.info(f'Statistics generated: {total_visitors} total visitors, {active_visitors} active visitors')
     return JsonResponse({
         'daily_visitors': list(daily_visitors),
         'total_visitors': total_visitors,
