@@ -13,6 +13,11 @@ services:
     networks:
       - backend
     command: -c 'max_connections=5000'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
 
   postgres_exporter:
     image: wrouesnel/postgres_exporter:latest
@@ -24,7 +29,8 @@ services:
     networks:
       - backend
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   web:
     build:
@@ -36,25 +42,40 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
     networks:
       - backend
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   redis:
     image: redis:alpine
     container_name: pooler_redis
     ports:
       - "6379:6379"
-    command: redis-server --save "" --appendonly no
+    command: redis-server --appendonly yes
     restart: always
     networks:
       - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
   celery:
-    image: pooler-2-web:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: pooler_celery
     command: ["sh", "/app/entrypoint.sh"]
     volumes:
@@ -64,9 +85,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
-      - web
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
     networks:
       - backend
     restart: always
@@ -104,7 +128,8 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     restart: unless-stopped
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_started
     networks:
       - backend
 
