@@ -194,7 +194,13 @@ class PoolerViewsTestCase(APITestCase):
         Test that full logs are cleared successfully.
         """
         url = reverse('pooler:clear_full_logs')
-        response = self.client.get(url)
+        response = self.client.get(url, {
+            'smtp': True,
+            'imap': True,
+            'socks': True,
+            'telegram': True,
+            'url': True
+        })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json().get('message'), 'Logs cleared successfully')
 
