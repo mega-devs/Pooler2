@@ -94,16 +94,16 @@ docs/_build/
 # Logs and other outputs
 *.log
 *.out
+.qodo/
 
 # Custom excludes
 db.yml
+backup/
 
 # Add any other files or directories you want to ignore
 session_name.session
 .vercel
 celerybeat-schedule
-backup
 root/uploads/
 */migrations/
-
 results
