@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from proxy.serializers import TextFileUploadSerializer
 
 from .tasks import check_smtp
-from .models import SmtpConfig, Combo, SMTPCheckResult, Statistics
+from .models import SMTPCombo, SMTPStatistics, SmtpConfig, SMTPCheckResult
 from .serializers import SmtpConfigSerializer, ComboSerializer, SMTPCheckResultSerializer, StatisticsSerializer
 
 
@@ -22,10 +22,10 @@ class SmtpConfigViewSet(viewsets.ModelViewSet):
 class ComboViewSet(viewsets.ModelViewSet):
     serializer_class = ComboSerializer
     permission_classes = [IsAuthenticated]
-    queryset = Combo.objects.none()
+    queryset = SMTPCombo.objects.none()
 
     def get_queryset(self):
-        return Combo.objects.filter(user=self.request.user)
+        return SMTPCombo.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=['post'], url_path='upload-combo')
     def upload_combo(self, request):
@@ -58,7 +58,7 @@ class StatisticsViewSet(viewsets.ModelViewSet):
     serializer_class = StatisticsSerializer
     permission_classes = [IsAuthenticated]
 
-    queryset = Statistics.objects.none()
+    queryset = SMTPStatistics.objects.none()
 
     def get_queryset(self):
-        return Statistics.objects.filter(user=self.request.user)
+        return SMTPStatistics.objects.filter(user=self.request.user)

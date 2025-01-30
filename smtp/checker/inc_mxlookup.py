@@ -1,7 +1,7 @@
 import sys
 import socket
 import dns.resolver
-from inc_etc import domain_verification
+from .inc_etc import domain_verification
 
 def get_host(default_timeout, email):
     '''

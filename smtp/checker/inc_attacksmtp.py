@@ -2,9 +2,9 @@ import sys
 import ssl
 import smtplib
 import json
-from inc_testmail import mailer
-from inc_etc import result
-from inc_mxlookup import get_host
+from .inc_testmail import mailer
+from .inc_etc import result
+from .inc_mxlookup import get_host
 
 try:
     with open('inc_smtpports.json') as inc_smtpports:

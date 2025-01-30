@@ -70,6 +70,7 @@ urlpatterns = [
    path('backup/set/', set_backup_delay),
    path('backup/get/', get_backup_delay),
    path('imap/', include('imap.urls')),
+   path('smtp/', include('smtp.urls')),
 ] + router.urls + static(main_settings.MEDIA_URL, document_root=main_settings.MEDIA_ROOT)
 
 if settings.DEBUG:

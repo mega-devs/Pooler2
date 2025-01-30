@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import SmtpConfig, Combo, SMTPCheckResult, Statistics
+from .models import SMTPCombo, SMTPStatistics, SmtpConfig, SMTPCheckResult
 
 
 class SmtpConfigSerializer(serializers.ModelSerializer):
@@ -12,7 +12,7 @@ class SmtpConfigSerializer(serializers.ModelSerializer):
 
 class ComboSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Combo
+        model = SMTPCombo
         fields = ['id', 'email', 'password', 'created_at']
         read_only_fields = ['created_at']
 
@@ -26,6 +26,6 @@ class SMTPCheckResultSerializer(serializers.ModelSerializer):
 
 class StatisticsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Statistics
+        model = SMTPStatistics
         fields = ['id', 'user', 'total_combos', 'total_hits', 'total_fails', 'updated_at']
         read_only_fields = ['updated_at']

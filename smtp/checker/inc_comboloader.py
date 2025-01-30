@@ -1,57 +1,48 @@
-import sys
-from datetime import datetime
-from inc_etc import result
-from inc_etc import email_verification
-from inc_etc import blacklist_check
+from ..models import SMTPCheckResult, SMTPCombo, SMTPStatistics
+from .inc_etc import email_verification, blacklist_check
 
-def comboloader(input_file):
+
+def comboloader(file_content, user_id):
     '''
-    Loads combos from a given file.
+    Loads combos from a given string.
 
-    :param str input_file: file containing the combos
+    :param str file_content: string containing the combos
+    :param user: user object for saving check results
     :return: list with loaded combos
     '''
-    loaded_combos = []
-    output_blacklist = str('combos_blacklisted')
-    output_clean = str('combos_loaded')
-    timestamp = datetime.now()
-    output_startup = str(
-        'Comboloader started on: '
-        + str(timestamp.strftime('%Y-%m-%d %H:%M:%S'))
-        + f', combofile: {input_file}'
-    )
-    result(output_blacklist, str('\n' + output_startup + '\n' + len(output_startup)*'='))
-    result(output_clean, str('\n' + output_startup + '\n' + len(output_startup) * '='))
-    try:
-        for line in open(input_file, 'r'):
-            try:
-                new_combo = str(
-                    line.replace(';', ':').replace(',', ':').replace('|', ':')
-                )
-                with_email = email_verification(
-                    new_combo.split(':')[0]
-                )
-                if with_email == False:
-                    continue
-                blacklisted = blacklist_check(
-                    new_combo.split(':')[0]
-                )
-                if blacklisted == True:
-                    new_combo = str(new_combo.replace('\n', ''))
-                    result(output_blacklist,new_combo)
-                    continue
-                if new_combo in loaded_combos:
-                    continue
-                else:
-                    loaded_combos.append(new_combo)
-                    new_combo = str(new_combo.replace('\n', ''))
-                    result(output_clean, new_combo)
-            except:
-                continue
-        result(output_blacklist, str(f'\nCombos imported from file: {input_file}.\n=== END OF IMPORT ==='))
-        result(output_clean, str(f'\nCombos imported from file: {input_file}.\n=== END OF IMPORT ==='))
-    except:
-        result(output_blacklist, str(f'\nAn error occurred while importing the combos from file: {input_file}.\n=== END OF IMPORT ==='))
-        result(output_clean, str(f'\nAn error occurred while importing the combos from file: {input_file}.\n=== END OF IMPORT ==='))
-    return loaded_combos
+
+    loaded_combos = set()
+    failed_combos = []
+    total_combos = 0
+
+    for line in file_content.splitlines():
+
+        new_combo = line.strip().replace(';', ':').replace(',', ':').replace('|', ':')
+        parts = new_combo.split(':')
+
+        if len(parts) < 2:
+            continue
+
+        total_combos += 1
+
+        email, password = parts[0], parts[1]
+
+        if not (email_verification(email) and not blacklist_check(email)):
+            failed_combos.append((email, password, 'fail'))
+            continue
+
+        if new_combo not in loaded_combos:
+            loaded_combos.add(new_combo)
+            SMTPCombo.objects.get_or_create(email=email, password=password, user_id=user_id)
+
+    for email, password, status in failed_combos:
+        combo, created = SMTPCombo.objects.get_or_create(email=email, password=password, user_id=user_id)
+        SMTPCheckResult.objects.create(combo=combo, user_id=user_id, status=status)
+
+    stats, created = SMTPStatistics.objects.get_or_create(user_id=user_id)
+    stats.total_combos += total_combos
+    stats.total_fails += len(failed_combos)
+    stats.save()
+
+    return list(loaded_combos)
 
