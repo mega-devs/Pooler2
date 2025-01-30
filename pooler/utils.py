@@ -230,7 +230,7 @@ async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
         print(f"Processing email: {email} with server: {server} port: {port}")
         smtp_status = None
         imap_status = None
-        provider_type = 'NONE'  # Default provider type
+        provider_type = 'NONE'
 
         try:
             match = re.match(r'^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})', email)
@@ -261,8 +261,15 @@ async def process_chunk_from_file(chunk, results, uploaded_file, start_line=0):
                             if code == 250:
                                 smtp_status = True
                                 print("SMTP validation successful")
-                                # Determine provider type based on server
-                                if 'gmail' in server or 'yahoo' in server or 'outlook' in server:
+                                
+                                big_servers = [
+                                    'gmail', 'yahoo', 'outlook', 'aol', 'zoho', 'mail.ru', 'yandex',
+                                    'wowway', 'bellsouth', 'windstream', 'optonline', 'wavecable',
+                                    'zoominternet', 'rcn', 'ptd', 'pldi', 'gvtc', 'twc', 'rr',
+                                    'roadrunner', 'hughes', 'sccoast', 'frontier', 'frontiernet',
+                                    'myfairpoint', 'wow', 'gvtc', 'mchsi']
+                                
+                                if any(big_server in server for big_server in big_servers):
                                     provider_type = 'BIG'
                                 else:
                                     provider_type = 'PRIVATE'

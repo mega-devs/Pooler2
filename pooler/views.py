@@ -866,7 +866,7 @@ def get_users(request):
     logger = logging.getLogger(__name__)
     logger.info('Fetching all users')
     
-    users = Visitor.objects.all().select_related('user').order_by('-start_time')[:1000]
+    users = Visitor.objects.all().select_related('user').order_by('-start_time')[:500]
     
     user_data = []
     for user in users:
