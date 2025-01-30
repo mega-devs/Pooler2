@@ -1,3 +1,5 @@
+import os
+import tempfile
 from django.urls import reverse
 from pooler.utils import LogFormatter, chunks, extract_country_from_filename, get_email_bd_data, imapCheck, read_logs
 from rest_framework import status
@@ -16,6 +18,14 @@ class PoolerViewsTestCase(APITestCase):
         self.token = Token.objects.create(user=self.user)
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        
+        # Create a temporary directory
+        self.temp_dir = tempfile.mkdtemp()
+
+        # Create some test data
+        self.file_path = os.path.join(self.temp_dir, 'test.txt')
+        with open(self.file_path, 'w') as f:
+            f.write('Sample test file content.')
 
     def test_redirect_to_panel(self):
         """
@@ -32,7 +42,7 @@ class PoolerViewsTestCase(APITestCase):
         """
         uploaded_file = UploadedFile.objects.create(
             filename="test.txt",
-            file_path="/test/path",
+            file_path=self.file_path,
             user=self.user)
 
         ExtractedData.objects.create(
@@ -209,6 +219,15 @@ class PoolerUtilsTestCase(APITestCase):
             username='testuser',
             password='testpassword')
         
+        # Create a temporary directory
+        self.temp_dir = tempfile.mkdtemp()
+
+        # Create some test data
+        self.file_path = os.path.join(self.temp_dir, 'test.txt')
+        with open(self.file_path, 'w') as f:
+            f.write('Sample test file content.')
+
+        
         self.sample_email = "test@example.com"
         self.sample_password = "testpass123"
         self.sample_server = "smtp.example.com"
@@ -236,7 +255,7 @@ class PoolerUtilsTestCase(APITestCase):
         """Test retrieval of email data from database"""
         uploaded_file = UploadedFile.objects.create(
             filename="test.txt",
-            file_path="/test/path",
+            file_path=self.file_path,
             user=self.user)
 
         ExtractedData.objects.create(
