@@ -229,16 +229,24 @@ class FileViewsTest(APITestCase):
         
 class FileSerializerTest(TestCase):
     def setUp(self):
+        # Create a temporary directory
+        self.temp_dir = tempfile.mkdtemp()
+
         # Create test user
         self.user = User.objects.create_user(
             username='testuser',
             password='testpass123'
         )
+
+        # Create some test data
+        self.file_path = os.path.join(self.temp_dir, 'test.txt')
+        with open(self.file_path, 'w') as f:
+            f.write('Sample test file content.')
         
         # Setup data for UploadedFile
         self.file_data = {
             'filename': 'test.txt',
-            'file_path': '/test/path/test.txt',
+            'file_path': self.file_path,
             'user': self.user.id,
             'origin': 'MANUAL'
         }
@@ -253,7 +261,7 @@ class FileSerializerTest(TestCase):
         # Create uploaded file first
         uploaded_file = UploadedFile.objects.create(
             filename='test.txt',
-            file_path='/test/path/test.txt',
+            file_path=self.file_path,
             user=self.user
         )
         
@@ -278,7 +286,6 @@ class FileResourceTest(TestCase):
             username='testuser',
             password='testpass123'
         )
-        self.client.force_authenticate(user=self.user)
 
         # Create some test data
         self.file_path = os.path.join(self.temp_dir, 'test.txt')
