@@ -36,7 +36,7 @@ def checker_thread(default_timeout, user_id):
         target_email, target_password = target.split(':')
 
         try:
-            combo = Combo.objects.get(email=target_email, password=target_password, user_id=user_id)
+            combo = Combo.objects.filter(email=target_email, password=target_password, user_id=user_id).first()
 
             result = imapchecker(default_timeout, target)
 

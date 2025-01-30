@@ -6,7 +6,7 @@ from .models import ImapConfig, Combo, IMAPCheckResult, Statistics
 class ImapConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImapConfig
-        fields = ['id', 'timeout', 'threads', 'user', 'created_at']
+        fields = ['id', 'timeout', 'threads', 'rounds', 'created_at']
         read_only_fields = ['created_at']
 
 
