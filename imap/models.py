@@ -8,6 +8,7 @@ class ImapConfig(models.Model):
     threads = models.PositiveSmallIntegerField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    rounds = models.PositiveSmallIntegerField(blank=True, null=True)
 
 
 class Combo(models.Model):
