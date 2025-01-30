@@ -110,7 +110,7 @@ async def telegram_add_channel(request):
         async def main():
             async with TelegramClient('session_name', api_id, api_hash) as client:
                 messages = await parse_messages(client, channel)
-                return messages
+                return messages.json()
 
         new_messages = await main()
         logger.info(f"Retrieved {len(new_messages)} messages from channel.")
