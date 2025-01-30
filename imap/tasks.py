@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def check_imap(user_id, file_content):
-    config = ImapConfig.objects.filter(user_id=user_id)
+    config = ImapConfig.objects.filter(user_id=user_id).first()
 
     rounds = 1
 

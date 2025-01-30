@@ -34,10 +34,10 @@ def comboloader(file_content, user_id):
 
         if new_combo not in loaded_combos:
             loaded_combos.add(new_combo)
-            Combo.objects.create(email=email, password=password, user_id=user_id)
+            Combo.objects.get_or_create(email=email, password=password, user_id=user_id)
 
     for email, password, status in failed_combos:
-        combo = Combo.objects.create(email=email, password=password, user_id=user_id)
+        combo, created = Combo.objects.get_or_create(email=email, password=password, user_id=user_id)
         IMAPCheckResult.objects.create(combo=combo, user_id=user_id, status=status)
 
     stats, created = Statistics.objects.get_or_create(user_id=user_id)
