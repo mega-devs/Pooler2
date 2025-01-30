@@ -54,8 +54,7 @@ services:
     networks:
       - backend
   celery:
-    build:
-      context: .
+    image: pooler-2-web:latest
     container_name: pooler_celery
     command: ["sh", "/app/entrypoint.sh"]
     volumes:
@@ -67,6 +66,7 @@ services:
     depends_on:
       - db
       - redis
+      - web
     networks:
       - backend
     restart: always
