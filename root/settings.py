@@ -198,8 +198,11 @@ CELERY_TIMEZONE = "UTC"
 CELERY_ENABLE_UTC = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # To avoid queue overload
 CELERY_TASK_ACKS_LATE = True  # Retry task on failure
-CELERY_TASK_SOFT_TIME_LIMIT = 120  # 2 minutes
-CELERY_TASK_TIME_LIMIT = 150  # Hard limit
+CELERY_TASK_TIME_LIMIT = 600  # Hard limit: 10 minutes per task
+CELERY_TASK_SOFT_TIME_LIMIT = 500  # Graceful soft timeout: 8 minutes
+CELERY_WORKER_CONCURRENCY = 4  # Adjust depending on available CPUs
+CELERYD_PREFETCH_MULTIPLIER = 1  # Prevent a worker from preloading too many tasks
+
 
 
 SWAGGER_SETTINGS = {

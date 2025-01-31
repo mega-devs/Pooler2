@@ -28,7 +28,7 @@ app.conf.broker_transport_options = {
 app.conf.beat_schedule = {
     "proxies": {
         "task": 'proxy.tasks.check_proxy_health',
-        "schedule": timedelta(seconds=300),
+        "schedule": timedelta(minutes=5),  # Every 5 minutes
     },
     'backup': {
         'task': 'proxy.tasks.backup_task',
@@ -36,25 +36,26 @@ app.conf.beat_schedule = {
     },
     'check_imap_emails_from_db': {
         "task": 'pooler.tasks.check_imap_emails_from_db',
-        "schedule": timedelta(seconds=15),
+        "schedule": timedelta(minutes=10),  # Increased from 150s
     },
     'check_smtp_emails_from_db': {
         "task": 'pooler.tasks.check_smtp_emails_from_db',
-        "schedule": timedelta(seconds=15),
+        "schedule": timedelta(minutes=10),  # Increased from 150s
     },
     'run_pytest': {
         'task': 'pooler.tasks.run_selected_tests',
-        'schedule': timedelta(seconds=300),
+        'schedule': timedelta(minutes=5),
     },
     'url_fetcher': {
         'task': 'files.tasks.fetch_files_from_url',
-        'schedule': timedelta(seconds=30)
+        'schedule': timedelta(minutes=1)  # Runs every 1 minute
     }
     # 'process-combo-files': {
     #     'task': 'pooler.utils.auto_process_combo_files',
     #     'schedule': timedelta(seconds=15),
     # }
 }
+
 
 
 @app.task(bind=True)
