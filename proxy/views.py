@@ -7,6 +7,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from .filters import ProxyFilter
 from .models import Proxy
 from .serializers import ProxySerizalizer, TextFileUploadSerializer
 from .tasks import check_proxy_health
@@ -14,12 +15,17 @@ from .utils import check_single_proxy
 
 from root.celery import app
 
+from django_filters.rest_framework import DjangoFilterBackend
+
 logger = logging.getLogger(__name__)
+
 
 class ProxyViewSet(ModelViewSet):
     queryset = Proxy.objects.all()
     serializer_class = ProxySerizalizer
     pagination_class = PageNumberPagination
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProxyFilter
 
     def retrieve(self, request, *args, **kwargs):
         logger.info("Retrieving proxy")
